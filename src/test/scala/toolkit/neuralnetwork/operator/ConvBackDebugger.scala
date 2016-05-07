@@ -1,0 +1,55 @@
+/*
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development LP
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package toolkit.neuralnetwork.operator
+
+import libcog._
+import cogdebugger._
+
+/** A debugger test to manually check difference between Fourier approach and
+  * backProjectFrame operator
+  * @author Matthew Pickett
+  */
+object ConvBackDebugger extends CogDebuggerApp( new ComputeGraph{
+  val inRows = 64
+  val inShape = Shape(inRows, inRows)
+  val filterSize = 9
+  val filterShape = Shape(filterSize, filterSize)
+  val filterNum = 32
+  val inputLen = 48
+  val batchSize = 24
+
+  val inputSetSize = 4
+  val batchSetSize = 4
+
+  //generate random inputs and filter bank
+  val grad = VectorField.random(inShape, Shape(filterNum * batchSize))
+  val f = VectorField.random(filterShape, Shape(filterNum * inputLen)) - 0.5f
+  val x = fourierBackProject(grad, f, batchSize, batchSetSize, inputSetSize)
+//  val x = backProjectFFT(grad, f, batchSize, filterSetSize, batchSetSize)
+
+  //calculate the difference between the above Fourier approach and backProjectFrame
+  val totalDiffBack = IndexedSeq.tabulate(batchSize){i=>{
+    val batchN = VectorField(Vector(filterNum, j=>j+i*filterNum))
+    val yN = vectorElements(grad, batchN)
+    val xN = blockReduceSum(backProjectFrame(yN,f,BorderCyclic),filterNum)
+
+    val outputN = VectorField(Vector(inputLen, j=>j+i*inputLen))
+    val singleDiff = xN - vectorElements(x, outputN)
+    singleDiff
+  }}.reduce(_+_)
+  probe(totalDiffBack, "total difference back")
+})
