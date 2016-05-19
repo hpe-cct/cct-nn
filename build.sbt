@@ -33,3 +33,5 @@ licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html
 bintrayRepository := "maven"
 
 bintrayOrganization := Some("cogexmachina")
+
+credentials += Credentials("Bintray", "dl.bintray.com", "hpe-cct-user", "5b702623a941bef832ee31b855366b84f8339338")
