@@ -1,12 +1,12 @@
-name := "cogx-nn"
+name := "cct-nn"
 
-description := "CogX neural network library."
+description := "CCT neural network library."
 
 organizationName := "Hewlett Packard Labs"
 
 organizationHomepage := Some(url("http://www.labs.hpe.com"))
 
-version := "2.0.0-alpha.1"
+version := "2.0.0-alpha.2"
 
 organization := "com.hpe.cct"
 
@@ -21,8 +21,8 @@ fork in Test := true
 javaOptions in Test ++= Seq("-Xmx100G", "-Xloggc:gc.log")
 
 libraryDependencies ++= Seq(
-  "com.hpe.cct" %% "cogx" % "4.4.9",
-  "com.hpe.cct" %% "cogx-io" % "0.8.6",
+  "com.hpe.cct" %% "cct-core" % "5.0.0-alpha.3",
+  "com.hpe.cct" %% "cct-io" % "0.8.7",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.scalatest" %% "scalatest" % "2.2.6" % "test",
   "junit" % "junit" % "4.7" % "test"
@@ -30,8 +30,9 @@ libraryDependencies ++= Seq(
 
 licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
 
+resolvers ++= Seq(Resolver.bintrayRepo("bchandle", "maven"),
+                  Resolver.bintrayRepo("hpe-cct", "maven"))
+
 bintrayRepository := "maven"
 
-bintrayOrganization := Some("cogexmachina")
-
-credentials += Credentials("Bintray", "dl.bintray.com", "hpe-cct-user", "5b702623a941bef832ee31b855366b84f8339338")
+bintrayOrganization := Some("hpe-cct")
