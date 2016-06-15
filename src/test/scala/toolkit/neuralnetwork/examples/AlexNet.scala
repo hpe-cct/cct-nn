@@ -22,21 +22,68 @@ import toolkit.neuralnetwork.DifferentiableField
 import toolkit.neuralnetwork.function._
 import toolkit.neuralnetwork.layer.{ConvolutionLayer, FullyConnectedLayer}
 import toolkit.neuralnetwork.policy.{Space, StandardLearningRule}
-import toolkit.neuralnetwork.source.RandomSource
+import toolkit.neuralnetwork.source.{ByteDataSource, FloatLabelSource, RandomSource}
 import toolkit.neuralnetwork.Implicits._
+import toolkit.neuralnetwork.examples.util.{DataAugmentation, VectorMeanSquares}
+import toolkit.neuralnetwork.util.{CorrectCount, NormalizedLowPass}
 
 
 object AlexNet extends CogDebuggerApp(new ComputeGraph {
+  // Network parameters:
+  // mini-batch size
   val batchSize = 128
+  // weight update rule and parameters
   val lr = StandardLearningRule(0.01f, 0.9f, 0.0005f)
+  // include AlexNet normalization layers?
+  val enableNormalization = true
+  // parameters for AlexNet normalization layers
+  val (k, alpha, beta, windowSize) = (2.0f, 1e-4f, 0.75f, 5)
 
-  Convolution.tuneForNvidiaMaxwell = true
+  // Data parameters:
+  // use random data or real data?
+  val useRandomData = true
+  // paths to the mean image file, training images, and training labels for real data option
+  val imagenetRoot = "/fdata/scratch/imagenet/"
+  val meanImageFile = imagenetRoot + "TrainingMeanImage1.bin"
+  val trainingImages = imagenetRoot + "TrainingImages1.bin"
+  val labelFile = imagenetRoot + "TrainingLabels1.bin"
 
-  val data = RandomSource(Shape(230, 230), 3, batchSize)
-  val label = RandomSource(Shape(), 1000, batchSize)
+  // Tuning parameters:
+  // use Maxwell-optimized convolution? set to false on Kepler or prior architectures.
+  Convolution.tuneForNvidiaMaxwell = false
 
-  // AlexNet normalization isn't ported yet. This is just a pass-through.
-  def normalize(input: DifferentiableField): DifferentiableField = input
+  def normalize(in: DifferentiableField): DifferentiableField = {
+    if (!enableNormalization) {
+      in
+    } else {
+      in * AplusBXtoN(VectorMeanSquares(in, windowSize, BorderCyclic), a = k, b = 5 * alpha, n = -beta)
+    }
+  }
+
+  val data: DifferentiableField = if (useRandomData) {
+    RandomSource(Shape(230, 230), 3, batchSize)
+  } else {
+    val meanImage = DataAugmentation.loadOffsetVector(meanImageFile)
+
+    def meanImageAsVectorField: VectorField = {
+      VectorField(meanImage.length, meanImage(0).length, (i, j) => meanImage(i)(j))
+    }
+
+    // Load 256x256x3 samples from disk
+    val raw = ByteDataSource(trainingImages, Shape(256, 256), 3, batchSize)
+    // Subtract the mean image and apply a random crop and reflection
+    val pre1 = DataAugmentation.subtractCropReflect2(raw.forward, meanImageAsVectorField, Shape(230, 230))
+    // Apply the AlexNet color shift data augmentation
+    val pre2 = DifferentiableField(DataAugmentation.applyColorShiftPerImage(pre1, batchSize), batchSize)
+
+    pre2
+  }
+
+  val label: DifferentiableField = if (useRandomData) {
+    RandomSource(Shape(), 1000, batchSize)
+  } else {
+    FloatLabelSource(labelFile, 1000, batchSize)
+  }
 
   val c1 = ConvolutionLayer(data, Shape(11, 11), 96, BorderValid, lr, stride = 4, impl = Space)
   val r1 = ReLU(c1)
@@ -71,4 +118,15 @@ object AlexNet extends CogDebuggerApp(new ComputeGraph {
   val loss = CrossEntropySoftmax(fc8, label) / batchSize
 
   loss.activateSGD()
+
+  val correct = CorrectCount(fc8.forward, label.forward, batchSize, 0.01f) / batchSize
+  val avgCorrect = NormalizedLowPass(correct, 0.001f)
+  val avgLoss = NormalizedLowPass(loss.forward, 0.001f)
+
+  probe(data.forward)
+  probe(label.forward)
+  probe(loss.forward)
+  probe(correct)
+  probe(avgCorrect)
+  probe(avgLoss)
 })
