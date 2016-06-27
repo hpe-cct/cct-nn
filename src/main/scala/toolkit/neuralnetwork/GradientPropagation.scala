@@ -99,7 +99,10 @@ trait GradientPropagation { self: DifferentiableField =>
         // Make sure the sender has an appropriate input port
         require(sender.inputs.contains(s._2))
         // Pass the upstream backwards field through the appropriate gradient port
-        sender.inputs(s._2).jacobianAdjoint(senderField)
+        val backField = sender.inputs(s._2).jacobianAdjoint(senderField)
+        // Make sure the backwards type is consistent
+        require(backField.fieldType == df.forward.fieldType, s"expected type ${df.forward.fieldType}, got ${backField.fieldType} from port ${s._2} on $sender")
+        backField
       })
 
       df.backward = Some(gradients.reduce(_ + _))
