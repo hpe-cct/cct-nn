@@ -25,7 +25,9 @@ libraryDependencies ++= Seq(
   "com.hpe.cct" %% "cct-io" % "0.8.7",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.scalatest" %% "scalatest" % "2.2.6" % "test",
-  "junit" % "junit" % "4.7" % "test"
+  "junit" % "junit" % "4.7" % "test",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0" % "test",
+  "ch.qos.logback" %  "logback-classic" % "1.1.7" % "test"
 )
 
 licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
