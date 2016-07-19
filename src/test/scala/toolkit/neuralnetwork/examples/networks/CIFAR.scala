@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package toolkit.neuralnetwork.performance
+package toolkit.neuralnetwork.examples.networks
 
+import java.io.File
 
 import libcog._
 import toolkit.neuralnetwork.Implicits._
@@ -23,19 +24,26 @@ import toolkit.neuralnetwork.examples.util.AveragePooling
 import toolkit.neuralnetwork.function._
 import toolkit.neuralnetwork.layer.{BiasLayer, ConvolutionLayer, FullyConnectedLayer}
 import toolkit.neuralnetwork.policy.StandardLearningRule
-import toolkit.neuralnetwork.source.RandomSource
+import toolkit.neuralnetwork.source.{ByteDataSource, ByteLabelSource, RandomSource}
 import toolkit.neuralnetwork.util.{CorrectCount, NormalizedLowPass}
 
 
-class CIFAR(learningEnabled: Boolean, batchSize: Int) extends ComputeGraph {
-  val LR = 0.01f
+class CIFAR(useRandomData: Boolean, learningEnabled: Boolean, batchSize: Int) {
+  val LR = 0.001f
   val momentum = 0.9f
-  val decay = 0.0005f
+  val decay = 0.004f
 
   val lr = StandardLearningRule(LR, momentum, decay)
 
-  val data = RandomSource(Shape(32, 32), 3, batchSize)
-  val label = RandomSource(Shape(), 10, batchSize)
+  val (data, label) = if (useRandomData) {
+    (RandomSource(Shape(32, 32), 3, batchSize), RandomSource(Shape(), 10, batchSize))
+  } else {
+      val dir = new File(System.getProperty("user.home"), "cog/data/cifar10")
+      val data = ByteDataSource(new File(dir, "training_data.bin").toString, Shape(32, 32), 3, batchSize) - 0.5f
+      val label = ByteLabelSource(new File(dir, "training_labels.bin").toString, 10, batchSize)
+
+      (data, label)
+  }
 
   val c1 = ConvolutionLayer(data, Shape(5, 5), 32, BorderZero, lr)
   val b1 = BiasLayer(c1, lr)

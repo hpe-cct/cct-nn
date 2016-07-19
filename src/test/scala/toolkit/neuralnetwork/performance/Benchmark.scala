@@ -17,8 +17,10 @@
 package toolkit.neuralnetwork.performance
 
 import com.typesafe.scalalogging.StrictLogging
+import toolkit.neuralnetwork.examples.networks.CIFAR
 
 import scala.collection.mutable.ListBuffer
+import libcog._
 
 
 object Benchmark extends App with StrictLogging {
@@ -34,7 +36,9 @@ object Benchmark extends App with StrictLogging {
   logger.info(s"net: $net")
   logger.info(s"batch size: $batchSize")
 
-  val cg1 = new CIFAR(learningEnabled = false, batchSize = batchSize)
+  val cg1 = new ComputeGraph {
+    val net = new CIFAR(useRandomData = true, learningEnabled = false, batchSize = batchSize)
+  }
 
   val forward = new ListBuffer[Double]()
   val backward = new ListBuffer[Double]()
@@ -54,7 +58,9 @@ object Benchmark extends App with StrictLogging {
     }
   }
 
-  val cg2 = new CIFAR(learningEnabled = true, batchSize = batchSize)
+  val cg2 = new ComputeGraph {
+    val net = new CIFAR(useRandomData = true, learningEnabled = true, batchSize = batchSize)
+  }
 
   cg2 withRelease {
     logger.info(s"starting compilation (learning)")
