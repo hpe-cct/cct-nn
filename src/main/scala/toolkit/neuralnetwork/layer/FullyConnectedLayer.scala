@@ -18,12 +18,13 @@ package toolkit.neuralnetwork.layer
 
 import libcog._
 import toolkit.neuralnetwork.function.{FullyConnected, TrainableState}
-import toolkit.neuralnetwork.policy.{FCInit, LearningRule, StubInit, WeightInitPolicy}
-import toolkit.neuralnetwork.DifferentiableField
+import toolkit.neuralnetwork.policy._
+import toolkit.neuralnetwork.{DifferentiableField, WeightBinding}
 
 
 object FullyConnectedLayer {
-  def apply(input: DifferentiableField, outputLen: Int, learningRule: LearningRule, initPolicy: WeightInitPolicy = StubInit): Layer = {
+  def apply(input: DifferentiableField, outputLen: Int, learningRule: LearningRule,
+            initPolicy: WeightInitPolicy = StubInit, weightBinding: WeightBinding = EmptyBinding): Layer = {
     val inputShape = input.forward.fieldShape
     val inputTensorShape = input.forward.tensorShape
     require(inputTensorShape.dimensions == 1, s"input must be a vector field, got $inputTensorShape")
@@ -35,11 +36,11 @@ object FullyConnectedLayer {
     // initialization policy, use that. Otherwise, replace the default StubInit policy with a populated
     // FCInit instance.
     val realInitPolicy = initPolicy match {
-      case StubInit => new FCInit(inputLen)
+      case StubInit => FCInit(inputLen)
       case i => i
     }
 
-    val weights = TrainableState(inputShape, Shape(inputLen * outputLen), realInitPolicy, learningRule)
+    val weights = TrainableState(inputShape, Shape(inputLen * outputLen), realInitPolicy, learningRule, weightBinding)
     Layer(FullyConnected(input, weights), weights)
   }
 }

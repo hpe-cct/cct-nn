@@ -18,12 +18,13 @@ package toolkit.neuralnetwork.layer
 
 import libcog._
 import toolkit.neuralnetwork.function.{Bias, TrainableState}
-import toolkit.neuralnetwork.policy.{LearningRule, WeightInitPolicy, ZeroInit}
-import toolkit.neuralnetwork.DifferentiableField
+import toolkit.neuralnetwork.policy.{EmptyBinding, LearningRule, WeightInitPolicy, ZeroInit}
+import toolkit.neuralnetwork.{DifferentiableField, WeightBinding}
 
 
 object BiasLayer {
-  def apply(input: DifferentiableField, learningRule: LearningRule, sharedBias: Boolean = true, initPolicy: WeightInitPolicy = ZeroInit): Layer = {
+  def apply(input: DifferentiableField, learningRule: LearningRule, sharedBias: Boolean = true,
+            initPolicy: WeightInitPolicy = ZeroInit, weightBinding: WeightBinding = EmptyBinding): Layer = {
     val inputShape = input.forward.fieldShape
     val inputTensorShape = input.forward.tensorShape
     require(inputTensorShape.dimensions == 1, s"input must be a vector field, got $inputTensorShape")
@@ -31,7 +32,7 @@ object BiasLayer {
 
     val inputLen = inputTensorShape(0) / input.batchSize
     val biasShape = if(sharedBias) Shape() else inputShape
-    val weights = TrainableState(biasShape, Shape(inputLen), initPolicy, learningRule)
+    val weights = TrainableState(biasShape, Shape(inputLen), initPolicy, learningRule, weightBinding)
 
     Layer(Bias(input, weights, sharedBias), weights)
   }

@@ -20,6 +20,7 @@ import java.io.File
 
 import libcog._
 import toolkit.neuralnetwork.Implicits._
+import toolkit.neuralnetwork.WeightStore
 import toolkit.neuralnetwork.examples.util.AveragePooling
 import toolkit.neuralnetwork.function._
 import toolkit.neuralnetwork.layer.{BiasLayer, ConvolutionLayer, FullyConnectedLayer}
@@ -28,7 +29,8 @@ import toolkit.neuralnetwork.source.{ByteDataSource, ByteLabelSource, RandomSour
 import toolkit.neuralnetwork.util.{CorrectCount, NormalizedLowPass}
 
 
-class CIFAR(useRandomData: Boolean, learningEnabled: Boolean, batchSize: Int) {
+class CIFAR(useRandomData: Boolean, learningEnabled: Boolean, batchSize: Int,
+            training: Boolean = true, val weights: WeightStore = WeightStore()) {
   val LR = 0.001f
   val momentum = 0.9f
   val decay = 0.004f
@@ -38,32 +40,37 @@ class CIFAR(useRandomData: Boolean, learningEnabled: Boolean, batchSize: Int) {
   val (data, label) = if (useRandomData) {
     (RandomSource(Shape(32, 32), 3, batchSize), RandomSource(Shape(), 10, batchSize))
   } else {
+      val prefix = if (training) {
+        "training"
+      } else {
+        "testing"
+      }
       val dir = new File(System.getProperty("user.home"), "cog/data/cifar10")
-      val data = ByteDataSource(new File(dir, "training_data.bin").toString, Shape(32, 32), 3, batchSize) - 0.5f
-      val label = ByteLabelSource(new File(dir, "training_labels.bin").toString, 10, batchSize)
+      val data = ByteDataSource(new File(dir, s"${prefix}_data.bin").toString, Shape(32, 32), 3, batchSize) - 0.5f
+      val label = ByteLabelSource(new File(dir, s"${prefix}_labels.bin").toString, 10, batchSize)
 
       (data, label)
   }
 
-  val c1 = ConvolutionLayer(data, Shape(5, 5), 32, BorderZero, lr)
-  val b1 = BiasLayer(c1, lr)
+  val c1 = ConvolutionLayer(data, Shape(5, 5), 32, BorderZero, lr, weightBinding = weights.bind('c1))
+  val b1 = BiasLayer(c1, lr, weightBinding = weights.bind('b1))
   val m1 = MaxPooling(b1, poolSize = 3, stride = 2)
   val r1 = ReLU(m1)
 
-  val c2 = ConvolutionLayer(r1, Shape(5, 5), 32, BorderZero, lr)
-  val b2 = BiasLayer(c2, lr)
+  val c2 = ConvolutionLayer(r1, Shape(5, 5), 32, BorderZero, lr, weightBinding = weights.bind('c2))
+  val b2 = BiasLayer(c2, lr, weightBinding = weights.bind('b2))
   val r2 = ReLU(b2)
   val p2 = AveragePooling(r2, poolSize = 3, stride = 2)
 
-  val c3 = ConvolutionLayer(p2, Shape(5, 5), 64, BorderZero, lr)
-  val b3 = BiasLayer(c3, lr)
+  val c3 = ConvolutionLayer(p2, Shape(5, 5), 64, BorderZero, lr, weightBinding = weights.bind('c3))
+  val b3 = BiasLayer(c3, lr, weightBinding = weights.bind('b3))
   val r3 = ReLU(b3)
   val p3 = AveragePooling(r3, poolSize = 3, stride = 2)
 
-  val fc64 = FullyConnectedLayer(p3, 64, lr)
+  val fc64 = FullyConnectedLayer(p3, 64, lr, weightBinding = weights.bind('fc64))
   val r64 = ReLU(fc64)
 
-  val fc10 = FullyConnectedLayer(r64, 10, lr)
+  val fc10 = FullyConnectedLayer(r64, 10, lr, weightBinding = weights.bind('fc10))
   val loss = CrossEntropySoftmax(fc10, label) / batchSize
 
   val correct = CorrectCount(fc10.forward, label.forward, batchSize, 0.01f) / batchSize

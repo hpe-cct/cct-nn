@@ -19,7 +19,7 @@ package toolkit.neuralnetwork.layer
 import libcog._
 import toolkit.neuralnetwork.function.{Convolution, TrainableState}
 import toolkit.neuralnetwork.policy._
-import toolkit.neuralnetwork.DifferentiableField
+import toolkit.neuralnetwork.{DifferentiableField, WeightBinding}
 
 
 object ConvolutionLayer {
@@ -30,7 +30,8 @@ object ConvolutionLayer {
             learningRule: LearningRule,
             stride: Int = 1,
             impl: ConvolutionalLayerPolicy = Best,
-            initPolicy: WeightInitPolicy = ConvInit): Layer = {
+            initPolicy: WeightInitPolicy = ConvInit,
+            weightBinding: WeightBinding = EmptyBinding): Layer = {
 
     val inputShape = input.forward.fieldShape
     val inputTensorShape = input.forward.tensorShape
@@ -41,7 +42,7 @@ object ConvolutionLayer {
 
     val inputLen = inputTensorShape(0) / input.batchSize
     // Allocating `filterNum` filters, each of a shape specified by `filterShape` and `inputLen` planes deep
-    val weights = TrainableState(filterShape, Shape(inputLen * filterNum), initPolicy, learningRule)
+    val weights = TrainableState(filterShape, Shape(inputLen * filterNum), initPolicy, learningRule, weightBinding)
     Layer(Convolution(input, weights, border, stride, impl), weights)
   }
 }

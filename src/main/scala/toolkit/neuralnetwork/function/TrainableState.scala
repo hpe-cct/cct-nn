@@ -17,14 +17,24 @@
 package toolkit.neuralnetwork.function
 
 import libcog._
-import toolkit.neuralnetwork.DifferentiableField
+import toolkit.neuralnetwork.{DifferentiableField, WeightBinding}
 import toolkit.neuralnetwork.policy.{LearningRule, WeightInitPolicy}
 
 
-case class TrainableState(fieldShape: Shape, tensorShape: Shape, initPolicy: WeightInitPolicy, learningRule: LearningRule) extends DifferentiableField {
+case class TrainableState(fieldShape: Shape, tensorShape: Shape, initPolicy: WeightInitPolicy,
+                          learningRule: LearningRule, weightBinding: WeightBinding) extends DifferentiableField {
   override val batchSize = 1
   override val gradientConsumer = learningRule.gradientConsumer
-  override val forward: Field = initPolicy.initState(fieldShape, tensorShape)
+  override val forward: Field = {
+    // If the weight binding has a stored set of weights, use those. If not,
+    // build a new set of weights using the initPolicy and register the resulting
+    // field so the WeightBinding can read it later.
+    weightBinding.initialWeights.getOrElse {
+      val initState = initPolicy.initState(fieldShape, tensorShape)
+      weightBinding.register(initState)
+      initState
+    }
+  }
 
   override def backwardCallback(backward: Field): Unit = learningRule.learn(forward, backward)
 }
