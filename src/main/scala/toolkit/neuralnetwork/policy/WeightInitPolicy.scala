@@ -16,10 +16,9 @@
 
 package toolkit.neuralnetwork.policy
 
-import cogio.FieldState
 import libcog._
 
 
 trait WeightInitPolicy {
-  def initState(fieldShape: Shape, tensorShape: Shape): FieldState
+  def initState(fieldShape: Shape, tensorShape: Shape): Field
 }

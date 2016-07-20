@@ -21,10 +21,10 @@ import libcog._
 
 
 case object ZeroInit extends WeightInitPolicy {
-  override def initState(fieldShape: Shape, tensorShape: Shape): FieldState = {
+  override def initState(fieldShape: Shape, tensorShape: Shape): Field = {
     val stateType = new FieldType(fieldShape, tensorShape, Float32)
     val statePoints = fieldShape.points * tensorShape.points
     val dat = IndexedSeq.tabulate(statePoints) { i => 0f }
-    FieldState(stateType, dat.toVector)
+    FieldState(stateType, dat.toVector).toField
   }
 }

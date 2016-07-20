@@ -16,12 +16,11 @@
 
 package toolkit.neuralnetwork.policy
 
-import cogio.FieldState
 import libcog._
 
 
 case object StubInit extends WeightInitPolicy {
-  override def initState(fieldShape: Shape, tensorShape: Shape): FieldState = {
+  override def initState(fieldShape: Shape, tensorShape: Shape): Field = {
     throw new RuntimeException("cannot initialize weights with a StubInit policy")
   }
 }

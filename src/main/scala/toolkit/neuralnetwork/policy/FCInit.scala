@@ -21,7 +21,7 @@ import libcog._
 
 
 case class FCInit(inputLen: Int) extends WeightInitPolicy {
-  override def initState(fieldShape: Shape, tensorShape: Shape): FieldState = {
+  override def initState(fieldShape: Shape, tensorShape: Shape): Field = {
     require(tensorShape.dimensions == 1)
     val stateType = new FieldType(fieldShape, tensorShape, Float32)
     val m = 1f
@@ -29,6 +29,6 @@ case class FCInit(inputLen: Int) extends WeightInitPolicy {
     val dist = NormalDistribution(0f, sigma)
     val rng = new Random
     val dat = IndexedSeq.tabulate(fieldShape.points * tensorShape.points) { i => dist.distFunc(rng.nextFloat) }
-    FieldState(stateType, dat.toVector)
+    FieldState(stateType, dat.toVector).toField
   }
 }

@@ -22,10 +22,9 @@ import toolkit.neuralnetwork.policy.{LearningRule, WeightInitPolicy}
 
 
 case class TrainableState(fieldShape: Shape, tensorShape: Shape, initPolicy: WeightInitPolicy, learningRule: LearningRule) extends DifferentiableField {
-  val initState = initPolicy.initState(fieldShape, tensorShape)
   override val batchSize = 1
   override val gradientConsumer = learningRule.gradientConsumer
-  override val forward: Field = initState.toField
+  override val forward: Field = initPolicy.initState(fieldShape, tensorShape)
 
   override def backwardCallback(backward: Field): Unit = learningRule.learn(forward, backward)
 }

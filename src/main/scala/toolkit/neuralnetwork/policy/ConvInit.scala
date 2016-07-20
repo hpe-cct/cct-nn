@@ -21,7 +21,7 @@ import libcog._
 
 
 case object ConvInit extends WeightInitPolicy {
-  override def initState(fieldShape: Shape, tensorShape: Shape): FieldState = {
+  override def initState(fieldShape: Shape, tensorShape: Shape): Field = {
     require(fieldShape.dimensions == 2, s"filters must be 2D, got $fieldShape")
     require(tensorShape.dimensions == 1, s"filter bank must be a vector field, got $tensorShape")
     require(tensorShape(0) >= 1, s"filter bank must contain at least one filter, got ${tensorShape(0)}")
@@ -33,6 +33,6 @@ case object ConvInit extends WeightInitPolicy {
     val dist = NormalDistribution(0f, sigma)
     val rng = new Random
     val dat = IndexedSeq.tabulate(statePoints) { i => dist.distFunc(rng.nextFloat) }
-    FieldState(stateType, dat.toVector)
+    FieldState(stateType, dat.toVector).toField
   }
 }
