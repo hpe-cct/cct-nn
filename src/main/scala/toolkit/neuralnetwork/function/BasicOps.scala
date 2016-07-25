@@ -56,10 +56,10 @@ trait BasicOps {
 private[neuralnetwork] object BasicOps {
 
   case class Add(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
-    require(left.forward.fieldType == right.forward.fieldType,
-      s"field types must match (got ${left.forward.fieldType} and ${right.forward.fieldType})")
     require(left.batchSize == right.batchSize,
       s"batch sizes must match (got ${left.batchSize} and ${right.batchSize})")
+    require(left.forward.fieldType == right.forward.fieldType,
+      s"field types must match (got ${left.forward.fieldType} and ${right.forward.fieldType})")
 
     override val batchSize: Int = left.batchSize
     override val forward: libcog.Field = left.forward + right.forward
@@ -76,10 +76,10 @@ private[neuralnetwork] object BasicOps {
   }
 
   case class Subtract(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
-    require(left.forward.fieldType == right.forward.fieldType,
-      s"field types must match (got ${left.forward.fieldType} and ${right.forward.fieldType})")
     require(left.batchSize == right.batchSize,
       s"batch sizes must match (got ${left.batchSize} and ${right.batchSize})")
+    require(left.forward.fieldType == right.forward.fieldType,
+      s"field types must match (got ${left.forward.fieldType} and ${right.forward.fieldType})")
 
     override val batchSize: Int = left.batchSize
     override val forward: libcog.Field = left.forward - right.forward
@@ -96,10 +96,10 @@ private[neuralnetwork] object BasicOps {
   }
 
   case class Multiply(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
-    require(left.forward.fieldType == right.forward.fieldType,
-      s"field types must match (got ${left.forward.fieldType} and ${right.forward.fieldType})")
     require(left.batchSize == right.batchSize,
       s"batch sizes must match (got ${left.batchSize} and ${right.batchSize})")
+    require(left.forward.fieldType == right.forward.fieldType,
+      s"field types must match (got ${left.forward.fieldType} and ${right.forward.fieldType})")
 
     override val batchSize: Int = left.batchSize
     override val forward: libcog.Field = left.forward * right.forward
