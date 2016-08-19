@@ -82,33 +82,39 @@ private[source] class FloatFileSensor(path: String,
     val N = vectorLen
     GPUOperator(outputType, "ReshapeFloatFileSource") {
       _globalThreads(fieldShape, Shape(vectorLen * batchSize))
-      fieldShape.dimensions match {
-        case 0 =>
-          val n = _tensorElement
-          val curElement = _readTensorElement(sensor, n, 0)
-          _writeTensorElement(_out0, curElement, _tensorElement)
-        case 1 =>
-          val batch = _tensorElement / vectorLen
-          val element = _tensorElement % vectorLen
-          val batchOffset = batch * C * N
-          val columnOffset = _column * N
-          val n = batchOffset + columnOffset + element
-          val curElement = _readTensorElement(sensor, n, 0)
-          _writeTensorElement(_out0, curElement, _column, _tensorElement)
-        case 2 =>
-          val batch = _tensorElement / vectorLen
-          val element = _tensorElement % vectorLen
-          val batchOffset = batch * R * C * N
-          val rowOffset = _row * C * N
-          val columnOffset = _column * N
-          val n = batchOffset + rowOffset + columnOffset + element
-          val curElement = _readTensorElement(sensor, n, 0)
-          _writeTensorElement(_out0, curElement, _row, _column, _tensorElement)
-        case 3 => ???
-        case _ => throw new RuntimeException("Invalid dimensionality")
-      }
+      val readIndex =
+        fieldShape.dimensions match {
+          case 0 =>
+            _tensorElement
+          case 1 =>
+            val batch = _tensorElement / vectorLen
+            val element = _tensorElement % vectorLen
+            val batchOffset = batch * C * N
+            val columnOffset = _column * N
+            val idx = batchOffset + columnOffset + element
+            idx
+          case 2 =>
+            val batch = _tensorElement / vectorLen
+            val element = _tensorElement % vectorLen
+            val batchOffset = batch * R * C * N
+            val rowOffset = _row * C * N
+            val columnOffset = _column * N
+            val idx = batchOffset + rowOffset + columnOffset + element
+            idx
+          case 3 =>
+            val batch = _tensorElement / vectorLen
+            val element = _tensorElement % vectorLen
+            val batchOffset = batch * L * R * C * N
+            val layerOffset = _layer * R * C * N
+            val rowOffset = _row * C * N
+            val columnOffset = _column * N
+            val idx = batchOffset + layerOffset + rowOffset + columnOffset + element
+            idx
+          case _ => throw new RuntimeException("Invalid dimensionality")
+        }
+      val curElement = _readTensor(sensor, readIndex)
+      _writeTensorElement(_out0, curElement, _tensorElement)
     }
-
   }
 }
 
