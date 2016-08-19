@@ -29,7 +29,7 @@ import org.scalatest.{FunSuite, Matchers}
 import org.scalatest.junit.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
-class ByteFileSensorSpec extends FunSuite with Matchers {
+class ByteFilePackedSensorSpec extends FunSuite with Matchers {
 
   /** generate data for the test. */
   def makeRandomData(length: Int): Array[Byte] = {
@@ -93,7 +93,7 @@ class ByteFileSensorSpec extends FunSuite with Matchers {
     val path = file.getAbsolutePath
 
     val cg = new ComputeGraph {
-      val sensor = new ByteFileSensor(path, "", fieldShape, tensorElements,
+      val sensor = new ByteFilePackedSensor(path, "", fieldShape, tensorElements,
         None, batchSize, updatePeriod = 1, headerLen = 0, pipelined).sensor
       probe(sensor)
     }
@@ -146,14 +146,14 @@ class ByteFileSensorSpec extends FunSuite with Matchers {
 
   val pipelinedTests = Seq(false, true)
 
-  test("0D ByteFileSensor") {
+  test("0D ByteFilePackedSensor") {
     for (pipelined <- pipelinedTests) {
       performTest(Shape(), 8, 8, 1, 0, pipelined)
       performTest(Shape(), 7, 9, 2, 1, pipelined)
     }
   }
 
-  test("1D ByteFileSensor") {
+  test("1D ByteFilePackedSensor") {
     for (pipelined <- pipelinedTests) {
       performTest(Shape(16), 8, 8, 1, 0, pipelined)
       performTest(Shape(1), 1, 1, 1, 0, pipelined)
@@ -161,21 +161,21 @@ class ByteFileSensorSpec extends FunSuite with Matchers {
     }
   }
 
-  test("2D ByteFileSensor") {
+  test("2D ByteFilePackedSensor") {
     for (pipelined <- pipelinedTests) {
       performTest(Shape(256,256), 3, 16, 2, 7, pipelined)
       performTest(Shape(1,1), 3, 16, 2, 7, pipelined)
     }
   }
 
-  test("3D ByteFileSensor") {
+  test("3D ByteFilePackedSensor") {
     for (pipelined <- pipelinedTests) {
       performTest(Shape(3,16,16), 8, 8, 1, 0, pipelined)
       performTest(Shape(1,1,1), 8, 8, 1, 0, pipelined)
     }
   }
 
-  test("ByteFileSensors with corner-case shapes") {
+  test("ByteFilePackedSensors with corner-case shapes") {
     // Sizes not divisible by 4 (important for when bytes are packed into Floats)
     for (pipelined <- pipelinedTests) {
       performTest(Shape(15,15), 3, 5, 7, 2, pipelined)

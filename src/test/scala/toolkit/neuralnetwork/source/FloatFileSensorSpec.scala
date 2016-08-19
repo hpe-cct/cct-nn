@@ -53,10 +53,11 @@ class FloatFileSensorSpec extends FunSuite with Matchers {
   }
 
   /** Create a name for the temporary file.  Java appends a unique id, but start with some meaningful identifiers. */
-  def mkFileName(fieldShape: Shape, tensorElements: Int, batchSize: Int, numBatches: Int, extraImages: Int): String = {
+  def mkFileName(fieldShape: Shape, tensorElements: Int, batchSize: Int, numBatches: Int,
+                 extraImages: Int, pipelined: Boolean): String = {
     val testName = this.getClass().getSimpleName
     val shape = fieldShape.toArray.mkString("_")
-    s"$testName-$shape-$tensorElements-$batchSize-$numBatches-$extraImages-id"
+    s"$testName-$shape-$tensorElements-$batchSize-$numBatches-$extraImages-$pipelined-id"
   }
 
   /** Create a vector out of the test data for the field position of the sensor ("elementIndex") as expected for
@@ -77,7 +78,8 @@ class FloatFileSensorSpec extends FunSuite with Matchers {
   }
 
   /** The test routine, parameterized by field and test set parameters. */
-  def performTest(fieldShape: Shape, tensorElements: Int, batchSize: Int, numBatches: Int, extraImages: Int): Unit = {
+  def performTest(fieldShape: Shape, tensorElements: Int, batchSize: Int, numBatches: Int,
+                  extraImages: Int, pipelined: Boolean): Unit = {
     require(extraImages < batchSize, s"ExtraImages $extraImages must be less than batchSize $batchSize.")
     val numImages = numBatches * batchSize + extraImages
     val imageElements = fieldShape.points * tensorElements
@@ -86,12 +88,13 @@ class FloatFileSensorSpec extends FunSuite with Matchers {
     // data for the test
     val data = makeRandomData(fileElements)
     // temporary input file containing the data
-    val fileName = mkFileName(fieldShape, tensorElements, batchSize, numBatches, extraImages)
+    val fileName = mkFileName(fieldShape, tensorElements, batchSize, numBatches, extraImages, pipelined)
     val file = makeTempInputFile(fileName, ".tmp", data)
     val path = file.getAbsolutePath
 
     val cg = new ComputeGraph {
-      val sensor = new FloatFileSensor(path, "", fieldShape, tensorElements, None, batchSize, 1, 0, true).sensor
+      val sensor = new FloatFileSensor(path, "", fieldShape, tensorElements,
+        None, batchSize, updatePeriod = 1, headerLen = 0, bigEndian = true, pipelined).sensor
       probe(sensor)
     }
     import cg._
@@ -141,34 +144,46 @@ class FloatFileSensorSpec extends FunSuite with Matchers {
     }
   }
 
-  test("0D ByteFileSensor") {
-    performTest(Shape(), 8, 8, 1, 0)
-    performTest(Shape(), 7, 9, 2, 1)
+  val pipelinedTests = Seq(false, true)
+
+  test("0D FloatFileSensor") {
+    for (pipelined <- pipelinedTests) {
+      performTest(Shape(), 8, 8, 1, 0, pipelined)
+      performTest(Shape(), 7, 9, 2, 1, pipelined)
+    }
   }
 
-  test("1D ByteFileSensor") {
-    performTest(Shape(16), 8, 8, 1, 0)
-    performTest(Shape(1), 1, 1, 1, 0)
-    performTest(Shape(1024), 4, 128, 2, 3)
+  test("1D FloatFileSensor") {
+    for (pipelined <- pipelinedTests) {
+      performTest(Shape(16), 8, 8, 1, 0, pipelined)
+      performTest(Shape(1), 1, 1, 1, 0, pipelined)
+      performTest(Shape(1024), 4, 128, 2, 3, pipelined)
+    }
   }
 
-  test("2D ByteFileSensor") {
-    performTest(Shape(256,256), 3, 16, 2, 7)
-    performTest(Shape(1,1), 3, 16, 2, 7)
+  test("2D FloatFileSensor") {
+    for (pipelined <- pipelinedTests) {
+      performTest(Shape(256,256), 3, 16, 2, 7, pipelined)
+      performTest(Shape(1,1), 3, 16, 2, 7, pipelined)
+    }
   }
 
-  test("3D ByteFileSensor") {
-    performTest(Shape(3,16,16), 8, 8, 1, 0)
-    performTest(Shape(1,1,1), 8, 8, 1, 0)
+  test("3D FloatFileSensor") {
+    for (pipelined <- pipelinedTests) {
+      performTest(Shape(3,16,16), 8, 8, 1, 0, pipelined)
+      performTest(Shape(1,1,1), 8, 8, 1, 0, pipelined)
+    }
   }
 
-  test("ByteFileSensors with corner-case shapes") {
+  test("FloatFileSensors with corner-case shapes") {
     // Sizes not divisible by 4 (important for when bytes are packed into Floats)
-    performTest(Shape(15,15), 3, 5, 7, 2)
-    performTest(Shape(9,9), 1, 5, 7, 2)
+    for (pipelined <- pipelinedTests) {
+      performTest(Shape(15,15), 3, 5, 7, 2, pipelined)
+      performTest(Shape(9,9), 1, 5, 7, 2, pipelined)
 
-    // Try 1 for batchSize, numBatches and some field dimensions
-    performTest(Shape(1,14), 1, 1, 7, 0)
-    performTest(Shape(6,1), 5, 1, 7, 0)
+      // Try 1 for batchSize, numBatches and some field dimensions
+      performTest(Shape(1,14), 1, 1, 7, 0, pipelined)
+      performTest(Shape(6,1), 5, 1, 7, 0, pipelined)
+    }
   }
 }

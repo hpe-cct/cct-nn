@@ -225,6 +225,9 @@ object FloatFileSensor {
     def readIntoReadArray(): Unit = {
       val readLenActual = bufferedStream.read(readArray)
       require(readLenActual == readLen, s"Actual num bytes read ($readLenActual) differs from expected ($readLen).")
+      readBuffer.position(0).limit(readLen) // mark readBuffer as full
+      readBuffer.asFloatBuffer().get(readArrayAsFloats)
+
       readArrayNeedsInit = false
     }
 
@@ -269,6 +272,27 @@ object FloatFileSensor {
       readArrayToFloatIterator()
     }
 
+    /** The next data iterator for the sensor.  This may be None if we're not updating each cycle. */
+    def arrayReadNext: Option[Array[Float]] = {
+      if (periodCounter == 0 || readArrayNeedsInit) {
+        readIntoReadArray()
+        advanceState()
+        Some(readArrayAsFloats)
+      }
+      else {
+        advanceState()
+        None
+      }
+    }
+
+    /** The next data iterator for the sensor.  This sources the same data if we're not updating each cycle. */
+    def arrayReadNextAlways: Array[Float] = {
+      if (periodCounter == 0 || readArrayNeedsInit)
+        readIntoReadArray()
+      advanceState()
+      readArrayAsFloats
+    }
+
     /** The parameters that would restore this sensor to its current state. */
     def parameters = {
 
@@ -296,7 +320,7 @@ object FloatFileSensor {
     }
 
     if (pipelined) {
-      new Sensor(Shape(readLenFloats), readNext _, resetBuffer _) {
+      new Sensor(readLenFloats, arrayReadNext _, resetBuffer _) {
         override def restoreParameters = parameters
 
         // The default restoringClass object instance would identify this as an anonymous subclass of a (pipelined) Sensor.
@@ -305,7 +329,7 @@ object FloatFileSensor {
       }
     }
     else {
-      new UnpipelinedSensor(Shape(readLenFloats), readNextAlways _, resetBuffer _) {
+      new UnpipelinedSensor(readLenFloats, arrayReadNextAlways _, resetBuffer _) {
         override def restoreParameters = parameters
 
         // The default restoringClass object instance would identify this as an anonymous subclass of a (pipelined) Sensor.

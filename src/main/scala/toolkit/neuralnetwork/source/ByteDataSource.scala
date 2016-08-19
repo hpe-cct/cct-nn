@@ -32,7 +32,7 @@ case class ByteDataSource(path: String,
                           stride: Int = 1,
                           resetState: Long = 0L) extends DifferentiableField {
 
-  private val sensor = new ByteFileSensor(
+  private val sensor = new ByteFilePackedSensor(
     path,
     resourcePath,
     fieldShape,
