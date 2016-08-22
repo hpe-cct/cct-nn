@@ -16,6 +16,8 @@
 
 package toolkit.neuralnetwork.source
 
+import java.nio.{ByteBuffer, ByteOrder}
+
 import libcog._
 
 /** A Cog `Sensor` that is used to read bytes from a file or jar and format them as
@@ -54,7 +56,7 @@ import libcog._
   * @param stride Distance (in batchSize units) between the start of one
   *               batch and the start of the next
   */
-class ByteFileSensor(path: String,
+class ByteFilePackedSensor(path: String,
                                      resourcePath: String,
                                      fieldShape: Shape,
                                      vectorLen: Int,
@@ -70,14 +72,14 @@ class ByteFileSensor(path: String,
   private val fieldPoints = fieldShape.points.toLong * vectorLen.toLong
 
   def sensor = {
-    val sensor = ByteFileSensor(path, resourcePath, fieldPoints, fieldCount, batchSize,
+    val sensor = ByteFilePackedSensor(path, resourcePath, fieldPoints, fieldCount, batchSize,
       updatePeriod, headerLen, pipelined, offset, stride, resetState)
     val outputType = new FieldType(fieldShape, Shape(vectorLen * batchSize), Float32)
     val L = outputType.layers
     val R = outputType.rows
     val C = outputType.columns
     val N = vectorLen
-    GPUOperator(outputType, "ReshapeByteFileSource") {
+    GPUOperator(outputType, "ReshapeByteFilePackedSource") {
       _globalThreads(fieldShape, Shape(vectorLen * batchSize))
       val readIndex =
         fieldShape.dimensions match {
@@ -109,8 +111,17 @@ class ByteFileSensor(path: String,
             idx
           case _ => throw new RuntimeException("Invalid dimensionality")
         }
-      val curElement = _readTensor(sensor, readIndex)
-      _writeTensorElement(_out0, curElement, _tensorElement)
+      val wordReadIndex = readIndex / 4
+      val shiftAmount =
+        if (ByteFilePackedSensor.bigEndian)
+          24 - 8 * (readIndex % 4)
+        else
+          8 * (readIndex % 4)
+      val curElement = _readTensor(sensor, wordReadIndex)
+      val curElementBytes = _as_uint(curElement)
+      val byteVal = (curElementBytes >> shiftAmount) & 0xFF
+      val byteValAsFloat = _convert_float(byteVal)
+      _writeTensorElement(_out0, byteValAsFloat, _tensorElement)
     }
   }
 }
@@ -120,7 +131,16 @@ class ByteFileSensor(path: String,
   *
   * @author Dick Carter
   */
-object ByteFileSensor {
+object ByteFilePackedSensor {
+
+  // This flag has nothing to do with the interpretation order of bytes in the input file, nor the arrangement of
+  // floats in the final reshaped field.  Basically it describes an implementation choice of how the linear bytes
+  // of the file are packed into floats, and subsequently unpacked by the reshaping kernel.  In practice, there
+  // seems to be little performance difference, with the edge going to big-endian, which seems to have a slightly faster
+  // CPU kernel.  The flexibility to change the setting was left in mostly to illustrate how the choice effects
+  // the implementation.  Bottom line, the setting doesn't really matter, so don't bother to change it.
+  private val bigEndian = true
+
   /** The factory method for this sensor. */
   def apply(path: String,
             resourcePath: String,
@@ -172,17 +192,25 @@ object ByteFileSensor {
 
     assert(batchSize.toLong * fieldPoints < Int.MaxValue)
     val readLen = (batchSize * fieldPoints).toInt
+    /** The readArrayLen might be bigger than the readLen to accomodate conversion to a FloatBuffer. */
+    val readArrayLen = 4 * ((readLen + 3)/4)
+    val floatArrayLen = readArrayLen / 4
     lazy val readArray = {
       // We want to warn the user of dropped examples once, and only if the sensor is used, so do this here:
       checkForDroppedExamples()
-      new Array[Byte](readLen)
+      new Array[Byte](readArrayLen)
     }
     /** Holds floating point version of readArray. Some of these Sensors are never stepped, so use `lazy` */
-    lazy val readFloatArray = new Array[Float](readLen)
+    lazy val readFloatArray = new Array[Float](floatArrayLen)
     var readArrayNeedsInit = true
 
-    // We perform byte -> float conversion (e.g. 0xFF -> 255.0f) via this table
-    val byteToFloatMap = Array.tabulate(256){i => i.toFloat}
+    lazy val readBuffer = {
+      val buf = ByteBuffer.wrap(readArray)
+      val endianness = if (bigEndian) ByteOrder.BIG_ENDIAN else ByteOrder.LITTLE_ENDIAN
+      buf.order(endianness)
+      require(buf.order() == endianness)
+      buf
+    }
 
     def resetBuffer() = rewindBuffer(resetState % numStatesInReadLoop)
 
@@ -212,11 +240,11 @@ object ByteFileSensor {
 
     /** Read from the file into the 'readArray' char buffer prior to translation to floats. */
     def readIntoReadArray(): Unit = {
-      val readLenActual = bufferedStream.read(readArray)
+      val readLenActual = bufferedStream.read(readArray, 0, readLen)
       require(readLenActual == readLen, s"Actual num bytes read ($readLenActual) differs from expected ($readLen).")
       // The term "readArray(i) & 0xFF" below performs a byte -> int conversion on Java's (strangely) signed Bytes.
-      for(i <- 0 until readLen)
-        readFloatArray(i) = byteToFloatMap(readArray(i) & 0xFF)
+      readBuffer.position(0).limit(readArrayLen) // mark readBuffer as full, may include up to 3 pad bytes
+      readBuffer.asFloatBuffer().get(readFloatArray)
 
       readArrayNeedsInit = false
     }
@@ -281,21 +309,21 @@ object ByteFileSensor {
     }
 
     if (pipelined) {
-      new Sensor(readLen, arrayReadNext _, resetBuffer _) {
+      new Sensor(floatArrayLen, arrayReadNext _, resetBuffer _) {
         override def restoreParameters = parameters
 
         // The default restoringClass object instance would identify this as an anonymous subclass of a (pipelined) Sensor.
         // We override this here to point to the SimplePipelinedTestSensor factory object (so the restore method will be found)
-        override def restoringClass = ByteFileSensor
+        override def restoringClass = ByteFilePackedSensor
       }
     }
     else {
-      new UnpipelinedSensor(readLen, arrayReadNextAlways _, resetBuffer _) {
+      new UnpipelinedSensor(floatArrayLen, arrayReadNextAlways _, resetBuffer _) {
         override def restoreParameters = parameters
 
         // The default restoringClass object instance would identify this as an anonymous subclass of a (pipelined) Sensor.
         // We override this here to point to the SimplePipelinedTestSensor factory object (so the restore method will be found)
-        override def restoringClass = ByteFileSensor
+        override def restoringClass = ByteFilePackedSensor
       }
     }
   }

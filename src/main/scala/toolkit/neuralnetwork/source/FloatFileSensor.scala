@@ -82,33 +82,39 @@ private[source] class FloatFileSensor(path: String,
     val N = vectorLen
     GPUOperator(outputType, "ReshapeFloatFileSource") {
       _globalThreads(fieldShape, Shape(vectorLen * batchSize))
-      fieldShape.dimensions match {
-        case 0 =>
-          val n = _tensorElement
-          val curElement = _readTensorElement(sensor, n, 0)
-          _writeTensorElement(_out0, curElement, _tensorElement)
-        case 1 =>
-          val batch = _tensorElement / vectorLen
-          val element = _tensorElement % vectorLen
-          val batchOffset = batch * C * N
-          val columnOffset = _column * N
-          val n = batchOffset + columnOffset + element
-          val curElement = _readTensorElement(sensor, n, 0)
-          _writeTensorElement(_out0, curElement, _column, _tensorElement)
-        case 2 =>
-          val batch = _tensorElement / vectorLen
-          val element = _tensorElement % vectorLen
-          val batchOffset = batch * R * C * N
-          val rowOffset = _row * C * N
-          val columnOffset = _column * N
-          val n = batchOffset + rowOffset + columnOffset + element
-          val curElement = _readTensorElement(sensor, n, 0)
-          _writeTensorElement(_out0, curElement, _row, _column, _tensorElement)
-        case 3 => ???
-        case _ => throw new RuntimeException("Invalid dimensionality")
-      }
+      val readIndex =
+        fieldShape.dimensions match {
+          case 0 =>
+            _tensorElement
+          case 1 =>
+            val batch = _tensorElement / vectorLen
+            val element = _tensorElement % vectorLen
+            val batchOffset = batch * C * N
+            val columnOffset = _column * N
+            val idx = batchOffset + columnOffset + element
+            idx
+          case 2 =>
+            val batch = _tensorElement / vectorLen
+            val element = _tensorElement % vectorLen
+            val batchOffset = batch * R * C * N
+            val rowOffset = _row * C * N
+            val columnOffset = _column * N
+            val idx = batchOffset + rowOffset + columnOffset + element
+            idx
+          case 3 =>
+            val batch = _tensorElement / vectorLen
+            val element = _tensorElement % vectorLen
+            val batchOffset = batch * L * R * C * N
+            val layerOffset = _layer * R * C * N
+            val rowOffset = _row * C * N
+            val columnOffset = _column * N
+            val idx = batchOffset + layerOffset + rowOffset + columnOffset + element
+            idx
+          case _ => throw new RuntimeException("Invalid dimensionality")
+        }
+      val curElement = _readTensor(sensor, readIndex)
+      _writeTensorElement(_out0, curElement, _tensorElement)
     }
-
   }
 }
 
@@ -219,6 +225,9 @@ object FloatFileSensor {
     def readIntoReadArray(): Unit = {
       val readLenActual = bufferedStream.read(readArray)
       require(readLenActual == readLen, s"Actual num bytes read ($readLenActual) differs from expected ($readLen).")
+      readBuffer.position(0).limit(readLen) // mark readBuffer as full
+      readBuffer.asFloatBuffer().get(readArrayAsFloats)
+
       readArrayNeedsInit = false
     }
 
@@ -263,6 +272,27 @@ object FloatFileSensor {
       readArrayToFloatIterator()
     }
 
+    /** The next data iterator for the sensor.  This may be None if we're not updating each cycle. */
+    def arrayReadNext: Option[Array[Float]] = {
+      if (periodCounter == 0 || readArrayNeedsInit) {
+        readIntoReadArray()
+        advanceState()
+        Some(readArrayAsFloats)
+      }
+      else {
+        advanceState()
+        None
+      }
+    }
+
+    /** The next data iterator for the sensor.  This sources the same data if we're not updating each cycle. */
+    def arrayReadNextAlways: Array[Float] = {
+      if (periodCounter == 0 || readArrayNeedsInit)
+        readIntoReadArray()
+      advanceState()
+      readArrayAsFloats
+    }
+
     /** The parameters that would restore this sensor to its current state. */
     def parameters = {
 
@@ -290,7 +320,7 @@ object FloatFileSensor {
     }
 
     if (pipelined) {
-      new Sensor(Shape(readLenFloats), readNext _, resetBuffer _) {
+      new Sensor(readLenFloats, arrayReadNext _, resetBuffer _) {
         override def restoreParameters = parameters
 
         // The default restoringClass object instance would identify this as an anonymous subclass of a (pipelined) Sensor.
@@ -299,7 +329,7 @@ object FloatFileSensor {
       }
     }
     else {
-      new UnpipelinedSensor(Shape(readLenFloats), readNextAlways _, resetBuffer _) {
+      new UnpipelinedSensor(readLenFloats, arrayReadNextAlways _, resetBuffer _) {
         override def restoreParameters = parameters
 
         // The default restoringClass object instance would identify this as an anonymous subclass of a (pipelined) Sensor.

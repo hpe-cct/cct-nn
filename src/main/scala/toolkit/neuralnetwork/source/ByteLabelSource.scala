@@ -35,7 +35,7 @@ case class ByteLabelSource(path: String,
   require(numClasses <= 256, "Number of classes must be <= 256 since each byte represents a class index")
   require(updatePeriod >= 1, "updatePeriod must be positive")
 
-  val sensor = new ByteFileSensor(
+  val sensor = new ByteFilePackedSensor(
     path,
     resourcePath,
     Shape(),
