@@ -532,13 +532,13 @@ object DataAugmentation {
     val alpha2 = 0.1*(rng.nextGaussian())
     val alpha3 = 0.1*(rng.nextGaussian())
 
-    val p1 = (0.34488906, 0.59677082, 0.72451096)
-    val p2 = (0.93862269, -0.22440265, -0.26197499)
-    val p3 = (-0.00624315, -0.77039473, 0.63753665)
+    val p1 = (-0.56771488, -0.58145678, -0.5827588)
+    val p2 = (-0.72252667, 0.01267614, 0.69122683)
+    val p3 = (0.3945314, -0.81347853, 0.42731446)
 
-    val lambda1 = 0.00133827628388  //87.0214153265  new eigenvalues based on re-scaled color values 0..1
-    val lambda2 = .0000365462764153  //2.37642162391
-    val lambda3 = .00000164797294  //0.10715944
+    val lambda1 = 0.204896523508
+    val lambda2 = 0.0194841685264
+    val lambda3 = 0.00456344555301
 
     val w1 = alpha1 * lambda1
     val w2 = alpha2 * lambda2
