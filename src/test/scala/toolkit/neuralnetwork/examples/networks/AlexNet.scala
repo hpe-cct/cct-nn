@@ -14,34 +14,37 @@
  * limitations under the License.
  */
 
-package toolkit.neuralnetwork.examples
+package toolkit.neuralnetwork.examples.networks
 
 import libcog._
-import cogdebugger._
 import toolkit.neuralnetwork.DifferentiableField
+import toolkit.neuralnetwork.Implicits._
+import toolkit.neuralnetwork.examples.util.{DataAugmentation, VectorMeanSquares}
 import toolkit.neuralnetwork.function._
 import toolkit.neuralnetwork.layer.{ConvolutionLayer, FullyConnectedLayer}
 import toolkit.neuralnetwork.policy.{Space, StandardLearningRule}
 import toolkit.neuralnetwork.source.{ByteDataSource, FloatLabelSource, RandomSource}
-import toolkit.neuralnetwork.Implicits._
-import toolkit.neuralnetwork.examples.util.{DataAugmentation, VectorMeanSquares}
 import toolkit.neuralnetwork.util.{CorrectCount, NormalizedLowPass}
 
 
-object AlexNet extends CogDebuggerApp(new ComputeGraph {
-  // Network parameters:
-  // mini-batch size
-  val batchSize = 128
+/** Neural network model from Alex Krishevsky, et.al.,  See:
+  *
+  * https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+  *
+  * @param batchSize The number of training images processed per simulation tick.
+  * @param enableNormalization Apply normalization to the first two layers.
+  * @param useRandomData Don't feed in real images, just generate random data (for performance studies).
+  *
+  * @author Ben Chandler and Dick Carter
+  */
+class AlexNet(batchSize: Int, enableNormalization: Boolean, useRandomData: Boolean) {
+  // Other Network parameters:
   // weight update rule and parameters
   val lr = StandardLearningRule(0.01f, 0.9f, 0.0005f)
-  // include AlexNet normalization layers?
-  val enableNormalization = true
   // parameters for AlexNet normalization layers
   val (k, alpha, beta, windowSize) = (2.0f, 1e-4f, 0.75f, 5)
 
   // Data parameters:
-  // use random data or real data?
-  val useRandomData = true
   // paths to the mean image file, training images, and training labels for real data option
   val imagenetRoot = "/fdata/scratch/imagenet/"
   val meanImageFile = imagenetRoot + "TrainingMeanImage1.bin"
@@ -50,7 +53,7 @@ object AlexNet extends CogDebuggerApp(new ComputeGraph {
 
   // Tuning parameters:
   // use Maxwell-optimized convolution? set to false on Kepler or prior architectures.
-  Convolution.tuneForNvidiaMaxwell = false
+  Convolution.tuneForNvidiaMaxwell = true
 
   def normalize(in: DifferentiableField): DifferentiableField = {
     if (!enableNormalization) {
@@ -129,4 +132,4 @@ object AlexNet extends CogDebuggerApp(new ComputeGraph {
   probe(correct)
   probe(avgCorrect)
   probe(avgLoss)
-})
+}

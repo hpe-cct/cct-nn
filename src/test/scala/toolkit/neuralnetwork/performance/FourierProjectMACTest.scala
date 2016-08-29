@@ -21,7 +21,14 @@ object FourierProjectMACTest extends App {
   val deviceNum = -1 // If -1 then all devices
   val layerNum = -1  // If -1, then AlexNet layer 2, 3 and 4.
 
-  val numDevices = OpenCLPlatform().devices.length
+  val deviceDescriptors = {
+    val platform = OpenCLPlatform()
+    try
+      platform.devices.map(device => device.toString)
+    finally
+      platform.release()
+  }
+  def numDevices = deviceDescriptors.length
   val deviceRange =
     if (deviceNum == -1)
       0 to numDevices - 1
@@ -90,7 +97,7 @@ object FourierProjectMACTest extends App {
   for (device <- deviceRange) {
     for (layer <- layerRange) {
       println(s"\n***************  Beginning testing of AlexNet layer $layer " +
-        s"on device $device (${OpenCLPlatform().devices(device)}) ******************\n")
+        s"on device $device (${deviceDescriptors(device)}) ******************\n")
       val results = mutable.HashMap[TestParam, Double]()
 
       val testCases =
@@ -114,7 +121,7 @@ object FourierProjectMACTest extends App {
       print(s"Best (batchSetSize, filterSetSize) = (${bestParams.batchSetSize},${bestParams.filterSetSize}).  ")
       println(s"Step time  = $bestStepTime msec, freq = $bestFreq.")
 
-      println(s"\nSummary for AlexNet layer $layer on device $device (${OpenCLPlatform().devices(device)}):\n")
+      println(s"\nSummary for AlexNet layer $layer on device $device (${deviceDescriptors(device)}):\n")
       println("Params\tFreq\n")
       for (testCase <- testCases) {
         val batchSetSize = testCase.batchSetSize
