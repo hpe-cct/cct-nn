@@ -20,15 +20,16 @@ import cogio.FieldState
 import com.typesafe.scalalogging.StrictLogging
 import libcog._
 import toolkit.neuralnetwork.WeightStore
-import toolkit.neuralnetwork.examples.networks.CIFAR
+import toolkit.neuralnetwork.examples.networks.Net
 
 
 object CIFARTrainer extends App with StrictLogging {
   val batchSize = 100
+  val netName = 'SimpleConvNet
 
   def validate(snapshot: Map[Symbol, FieldState]): (Float, Float) = {
     val cg = new ComputeGraph {
-      val net = new CIFAR(useRandomData = false, learningEnabled = false, batchSize = batchSize,
+      val net = Net(netName, useRandomData = false, learningEnabled = false, batchSize = batchSize,
         training = false, weights = WeightStore.restoreFromSnapshot(snapshot))
 
       probe(net.correct)
@@ -62,7 +63,7 @@ object CIFARTrainer extends App with StrictLogging {
   }
 
   val cg = new ComputeGraph {
-    val net = new CIFAR(useRandomData = false, learningEnabled = true, batchSize = batchSize)
+    val net = Net(netName, useRandomData = false, learningEnabled = true, batchSize = batchSize)
 
     probe(net.correct)
     probe(net.loss.forward)
