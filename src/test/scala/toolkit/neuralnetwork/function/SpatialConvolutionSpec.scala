@@ -28,11 +28,11 @@ class SpatialConvolutionSpec extends UnitSpec with ComputeTests {
   val inputShapes = Seq(Shape(32, 64), Shape(5, 5))
   val inputLens = Seq(11, 11 * 13)
 
-  def fn(downsampleFactor: Int) = {
-    a: Seq[DifferentiableField] => SpatialConvolution(a.head, a(1), stride = downsampleFactor)
+  def fn(downsampleFactor: Int, borderPolicy: BorderPolicy = BorderValid) = {
+    a: Seq[DifferentiableField] => SpatialConvolution(a.head, a(1), stride = downsampleFactor, border = borderPolicy)
   }
 
-  "The spatial conv op" should "handle batchSize 1" in {
+  "The spatial conv op (BorderValid)" should "handle batchSize 1" in {
     val batchSizes = Seq(1, 1)
     val downsampleFactor = 1
 
@@ -116,4 +116,89 @@ class SpatialConvolutionSpec extends UnitSpec with ComputeTests {
     jacobian(node, inputShapes, inputLens, batchSizes)
     jacobianAdjoint(node, inputShapes, inputLens, batchSizes)
   }
+
+  "The spatial conv op (BorderZero)" should "handle batchSize 1" in {
+    val batchSizes = Seq(1, 1)
+    val downsampleFactor = 1
+
+    val node = fn(downsampleFactor, BorderZero)
+
+    jacobian(node, inputShapes, inputLens, batchSizes)
+    jacobianAdjoint(node, inputShapes, inputLens, batchSizes)
+  }
+
+  it should "handle batchSize 1 with downsample 2" in {
+    val batchSizes = Seq(1, 1)
+    val inputLens = Seq(11, 11 * 13)
+    val downsampleFactor = 2
+
+    val node = fn(downsampleFactor)
+
+    jacobian(node, inputShapes, inputLens, batchSizes)
+    jacobianAdjoint(node, inputShapes, inputLens, batchSizes)
+  }
+
+  it should "handle batchSize 1 with downsample 3" in {
+    val batchSizes = Seq(1, 1)
+    val inputShapes = Seq(Shape(36, 66), Shape(7, 7))
+    val inputLens = Seq(12, 12 * 8)
+    val downsampleFactor = 3
+
+    val node = fn(downsampleFactor)
+
+    jacobian(node, inputShapes, inputLens, batchSizes)
+    jacobianAdjoint(node, inputShapes, inputLens, batchSizes)
+  }
+
+  it should "handle batchSize >1" in {
+    val batchSizes = Seq(2, 1)
+    val downsampleFactor = 1
+
+    val node = fn(downsampleFactor)
+
+    jacobian(node, inputShapes, inputLens, batchSizes)
+    jacobianAdjoint(node, inputShapes, inputLens, batchSizes)
+  }
+
+  it should "handle batchSize >1 with downsample 2" in {
+    val batchSizes = Seq(2, 1)
+    val inputLens = Seq(11, 11 * 13)
+    val downsampleFactor = 2
+
+    val node = fn(downsampleFactor)
+
+    jacobian(node, inputShapes, inputLens, batchSizes)
+    jacobianAdjoint(node, inputShapes, inputLens, batchSizes)
+  }
+
+  it should "handle batchSize >1 with downsample 3" in {
+    val batchSizes = Seq(10, 1)
+    val inputShapes = Seq(Shape(36, 66), Shape(7, 7))
+    val inputLens = Seq(4, 4 * 17)
+    val downsampleFactor = 3
+
+    val node = fn(downsampleFactor)
+
+    jacobian(node, inputShapes, inputLens, batchSizes)
+    jacobianAdjoint(node, inputShapes, inputLens, batchSizes)
+  }
+
+  it should "handle AlexNet CL2-like parameters" in {
+    // Like AlexNet layer 2, although with reduced number of filters and small batch size
+    val inputRows = 55
+    val inputColumns = 55
+    val inputPlanes = 96
+    val batchSize = 8
+    val filterSize = 5
+    val numFilters = 8
+    val inputShapes = Seq(Shape(inputRows, inputColumns), Shape(filterSize, filterSize))
+    val batchSizes = Seq(batchSize, 1)
+    val inputLens = Seq(inputPlanes, inputPlanes * numFilters)
+
+    val node = fn(1, BorderZero)
+
+    jacobian(node, inputShapes, inputLens, batchSizes)
+    jacobianAdjoint(node, inputShapes, inputLens, batchSizes)
+  }
+
 }

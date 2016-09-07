@@ -22,7 +22,7 @@ import toolkit.neuralnetwork.Implicits._
 import toolkit.neuralnetwork.examples.util.{DataAugmentation, VectorMeanSquares}
 import toolkit.neuralnetwork.function._
 import toolkit.neuralnetwork.layer.{ConvolutionLayer, FullyConnectedLayer}
-import toolkit.neuralnetwork.policy.{Space, StandardLearningRule}
+import toolkit.neuralnetwork.policy.{Freq, Space, StandardLearningRule}
 import toolkit.neuralnetwork.source.{ByteDataSource, FloatLabelSource, RandomSource}
 import toolkit.neuralnetwork.util.{CorrectCount, NormalizedLowPass}
 
@@ -93,18 +93,18 @@ class AlexNet(batchSize: Int, enableNormalization: Boolean, useRandomData: Boole
   val n1 = normalize(r1)
   val p1 = MaxPooling(n1, poolSize = 3, stride = 2)
 
-  val c2 = ConvolutionLayer(p1, Shape(5, 5), 256, BorderZero, lr)
+  val c2 = ConvolutionLayer(p1, Shape(5, 5), 256, BorderZero, lr, impl = Freq)
   val r2 = ReLU(c2)
   val n2 = normalize(r2)
   val p2 = MaxPooling(n2, poolSize = 3, stride = 2)
 
-  val c3 = ConvolutionLayer(p2, Shape(3, 3), 384, BorderZero, lr)
+  val c3 = ConvolutionLayer(p2, Shape(3, 3), 384, BorderZero, lr, impl = Freq)
   val r3 = ReLU(c3)
 
-  val c4 = ConvolutionLayer(r3, Shape(3, 3), 384, BorderZero, lr)
+  val c4 = ConvolutionLayer(r3, Shape(3, 3), 384, BorderZero, lr, impl = Freq)
   val r4 = ReLU(c4)
 
-  val c5 = ConvolutionLayer(r4, Shape(3, 3), 256, BorderZero, lr)
+  val c5 = ConvolutionLayer(r4, Shape(3, 3), 256, BorderZero, lr, impl = Space)
   val r5 = ReLU(c5)
   val p5 = MaxPooling(r5, poolSize = 3, stride = 2)
 
