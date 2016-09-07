@@ -31,7 +31,7 @@ import toolkit.neuralnetwork.util.{CorrectCount, NormalizedLowPass}
 
 
 class CIFAR(useRandomData: Boolean, learningEnabled: Boolean, batchSize: Int,
-            training: Boolean = true, val weights: WeightStore = WeightStore()) {
+            training: Boolean = true, val weights: WeightStore = WeightStore()) extends Net {
   val LR = 0.001f
   val momentum = 0.9f
   val decay = 0.004f

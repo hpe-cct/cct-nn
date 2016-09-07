@@ -465,17 +465,8 @@ object DataAugmentation {
    * A sensor is used to cycle through the 10 possible patches
    */
 
-  val idx = MyIndexer
-  val patches = Array((0f,0f,0f),(0f,0f,0f),(0f,0f,0f),(0f,0f,0f),(0f,0f,0f),  // hack for now to have 50
-    (0f,26f,0f),(0f,26f,0f),(0f,26f,0f),(0f,26f,0f),(0f,26f,0f),
-    (13f,13f,0f),(13f,13f,0f),(13f,13f,0f),(13f,13f,0f),(13f,13f,0f),
-    (26f,0f,0f),(26f,0f,0f),(26f,0f,0f),(26f,0f,0f),(26f,0f,0f),
-    (26f,26f,0f),(26f,26f,0f),(26f,26f,0f),(26f,26f,0f),(26f,26f,0f),
-    (0f,0f,1f),(0f,0f,1f),(0f,0f,1f),(0f,0f,1f),(0f,0f,1f),
-    (0f,26f,1f),(0f,26f,1f),(0f,26f,1f),(0f,26f,1f),(0f,26f,1f),
-    (13f,13f,1f),(13f,13f,1f),(13f,13f,1f),(13f,13f,1f),(13f,13f,1f),
-    (26f,0f,1f),(26f,0f,1f),(26f,0f,1f),(26f,0f,1f),(26f,0f,1f),
-    (26f,26f,1f),(26f,26f,1f),(26f,26f,1f),(26f,26f,1f),(26f,26f,1f))
+  val patches = Array((0f,0f,0f), (0f,26f,0f), (13f,13f,0f), (26f,0f,0f), (26f,26f,0f),
+    (0f,0f,1f), (0f,26f,1f), (13f,13f,1f), (26f,0f,1f), (26f,26f,1f))
 
   def validationPatch(img: Field, offset: Field, outputShape: Shape): Field = {
     require(img.fieldShape.dimensions == 2, "Requires a 2D field")
@@ -486,6 +477,21 @@ object DataAugmentation {
     require(img.fieldShape(1) > outputShape(1), "Requires output size < input size")
 
     val outputType = new FieldType(outputShape, img.tensorShape, img.fieldType.elementType)
+
+    class PatchIndexer {
+      var count = -1
+
+      def nextIdx: Int = {
+        count += 1
+        val idx = count % patches.size
+        idx
+      }
+      def reset: Unit = {
+        count = -1
+      }
+    }
+
+    val idx = new PatchIndexer
 
     def nextIndex:Option[Iterator[Float]] = {
       //val next = Array[Float](idx.nextY, idx.nextX, idx.nextR)
@@ -499,7 +505,7 @@ object DataAugmentation {
       Option (next.iterator)
     }
 
-    val nextPatch = new Sensor(Shape(3), nextIndex _, resetHook _)
+    val nextPatch = new Sensor(Shape(3), nextIndex _, idx.reset _)
 
     GPUOperator(outputType, "ValidationPatch") {
       _globalThreads(outputType.fieldShape, outputType.tensorShape)
@@ -532,13 +538,13 @@ object DataAugmentation {
     val alpha2 = 0.1*(rng.nextGaussian())
     val alpha3 = 0.1*(rng.nextGaussian())
 
-    val p1 = (0.34488906, 0.59677082, 0.72451096)
-    val p2 = (0.93862269, -0.22440265, -0.26197499)
-    val p3 = (-0.00624315, -0.77039473, 0.63753665)
+    val p1 = (-0.56771488, -0.58145678, -0.5827588)
+    val p2 = (-0.72252667, 0.01267614, 0.69122683)
+    val p3 = (0.3945314, -0.81347853, 0.42731446)
 
-    val lambda1 = 0.00133827628388  //87.0214153265  new eigenvalues based on re-scaled color values 0..1
-    val lambda2 = .0000365462764153  //2.37642162391
-    val lambda3 = .00000164797294  //0.10715944
+    val lambda1 = 0.204896523508
+    val lambda2 = 0.0194841685264
+    val lambda3 = 0.00456344555301
 
     val w1 = alpha1 * lambda1
     val w2 = alpha2 * lambda2
@@ -612,13 +618,13 @@ object DataAugmentation {
         val alpha2 = 0.1 * (rng.nextGaussian())
         val alpha3 = 0.1 * (rng.nextGaussian())
 
-        val p1 = (0.34488906, 0.59677082, 0.72451096)
-        val p2 = (0.93862269, -0.22440265, -0.26197499)
-        val p3 = (-0.00624315, -0.77039473, 0.63753665)
+        val p1 = (-0.56771488, -0.58145678, -0.5827588)
+        val p2 = (-0.72252667, 0.01267614, 0.69122683)
+        val p3 = (0.3945314, -0.81347853, 0.42731446)
 
-        val lambda1 = 0.00133827628388  //87.0214153265  new eigenvalues based on re-scaled color values 0..1
-        val lambda2 = .0000365462764153  //2.37642162391
-        val lambda3 = .00000164797294  //0.10715944
+        val lambda1 = 0.204896523508
+        val lambda2 = 0.0194841685264
+        val lambda3 = 0.00456344555301
 
         val w1 = alpha1 * lambda1
         val w2 = alpha2 * lambda2
