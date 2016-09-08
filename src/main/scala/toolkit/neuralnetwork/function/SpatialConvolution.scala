@@ -31,7 +31,9 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
 case class SpatialConvolution(input: DifferentiableField, weights: DifferentiableField,
                               border: BorderPolicy = BorderValid, stride: Int = 1) extends DifferentiableField {
 
-  require(border == BorderValid, s"only BorderValid convolution is supported in the space domain, got $border")
+  val supportedBorders = Seq(BorderValid, BorderZero)
+  require(supportedBorders.contains(border),
+    s"border policy $border not supported, must be one of: ${supportedBorders.mkString(", ")}.")
   require(weights.batchSize == 1, s"weights must have a batch size of 1, got ${weights.batchSize}")
 
   private val x1 = (input.forward, input.batchSize)
@@ -57,7 +59,7 @@ case class SpatialConvolution(input: DifferentiableField, weights: Differentiabl
     assert(inputLen % batchSize == 0,
       s"internal test error: expecting input vector depth $inputLen to be a multiple of the batchsize $batchSize")
     val numInputs = inputLen / batchSize
-    val result = blockReduceSum(projectFrame(in1, filter, BorderValid, DownsampleOutputConvolution(stride), batchSize), numInputs)
+    val result = blockReduceSum(projectFrame(in1, filter, border, DownsampleOutputConvolution(stride), batchSize), numInputs)
     (result, batchSize)
   }
 
@@ -80,7 +82,15 @@ case class SpatialConvolution(input: DifferentiableField, weights: Differentiabl
     val numInputs = inputLen / batchSize
     val numFilters = filter.tensorShape(0) / numInputs
 
-    blockReduceSum(backProjectFrame(grad, filter, BorderFull, UpsampleInputConvolution(stride), batchSize), numFilters)
+    val retField = border match {
+      case BorderValid =>
+        blockReduceSum(backProjectFrame(grad, filter, BorderFull, UpsampleInputConvolution(stride), batchSize), numFilters)
+      case BorderZero =>
+        blockReduceSum(backProjectFrame(grad, filter, BorderZero, UpsampleInputConvolution(stride), batchSize), numFilters)
+      case x =>
+        throw new RuntimeException(s"Unexpected border policy $x.")
+    }
+    retField
   }
 
   private def jacobian2(dx2: Field, x1: (Field, Int), x2: (Field, Int)): Field =
@@ -89,6 +99,11 @@ case class SpatialConvolution(input: DifferentiableField, weights: Differentiabl
   private def jacobianAdjoint2(grad: Field, x1: (Field, Int), x2: (Field, Int)): Field = {
     val (in1, batchSize) = x1
     val (filter, filterBatchSize) = x2
+    val (filterRows, filterColumns) = {
+      require(filter.dimensions == 2, "Expecting 2D filter")
+      require(filter.rows % 2 == 1 && filter.columns % 2 == 1, s"Expecting odd filter sizes, found ${filter.fieldShape}.")
+      (filter.rows, filter.columns)
+    }
     val inputLen = in1.tensorShape(0)
     val gradLen = grad.tensorShape(0)
     assert(inputLen % batchSize == 0,
@@ -96,7 +111,20 @@ case class SpatialConvolution(input: DifferentiableField, weights: Differentiabl
     assert(gradLen % batchSize == 0,
       s"internal test error: expecting gradient vector depth $gradLen to be a multiple of the batchsize $batchSize")
 
-    val dX2 = crossCorrelateFilterAdjoint(in1, grad, BorderValid, UpsampleInputConvolution(stride), batchSize)
+    // Apply a 0-valued halo region around a field, as needed for BorderZero border policy.
+    def addZeroHalo(f: Field, rowHalo: Int, columnHalo: Int) = {
+      val expandedShape = Shape(f.rows + 2 * rowHalo, f.columns + 2 * columnHalo)
+      f.expand(BorderZero, expandedShape).shiftCyclic(rowHalo, columnHalo)
+    }
+    val dX2 = border match {
+      case BorderValid =>
+        crossCorrelateFilterAdjoint(in1, grad, BorderValid, UpsampleInputConvolution(stride), batchSize)
+      case BorderZero =>
+        val paddedIn = addZeroHalo(in1, filterRows/2, filterColumns/2)
+        crossCorrelateFilterAdjoint(paddedIn, grad, BorderValid, UpsampleInputConvolution(stride), batchSize)
+      case x =>
+        throw new RuntimeException(s"Unexpected border policy $x.")
+    }
 
     val dX2Len = dX2.tensorShape(0)
     assert(dX2Len % batchSize == 0,
