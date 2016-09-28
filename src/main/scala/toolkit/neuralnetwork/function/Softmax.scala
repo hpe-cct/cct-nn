@@ -29,7 +29,7 @@ import toolkit.neuralnetwork.operator.{spray, sumSpray}
   * @param input    The input signal, typically a classification output.
   * @param safeMode Protect against generating NaNs for large inputs (>100).
   */
-case class Softmax(input: DifferentiableField, safeMode: Boolean = true) extends DifferentiableField {
+class Softmax private[Softmax] (input: DifferentiableField, safeMode: Boolean) extends DifferentiableField {
   private val x1 = (input.forward, input.batchSize)
 
   override val batchSize: Int = input.batchSize
@@ -74,4 +74,21 @@ case class Softmax(input: DifferentiableField, safeMode: Boolean = true) extends
   private def jacobianAdjoint(grad: Field, in: (Field, Int)): Field = {
     jacobian(grad, in)
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, safeMode)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object Softmax {
+  /** The softmax (multinomial logistic regression).  Converts the input to a form that could be
+    * considered a discrete probability distribution- i.e. all positive values that sum to 1.
+    *
+    * @param input    The input signal, typically a classification output.
+    * @param safeMode Protect against generating NaNs for large inputs (>100).
+    */
+  def apply(input: DifferentiableField, safeMode: Boolean = true) =
+    new Softmax(input, safeMode)
 }

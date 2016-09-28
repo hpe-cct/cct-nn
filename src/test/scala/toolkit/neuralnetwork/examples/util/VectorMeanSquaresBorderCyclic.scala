@@ -29,7 +29,8 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param in1 the input signal
   * @param windowSize the size of the window over which to sum the square
   */
-case class VectorMeanSquaresBorderCyclic(in1: DifferentiableField, windowSize: Int) extends DifferentiableField {
+class VectorMeanSquaresBorderCyclic private[VectorMeanSquaresBorderCyclic] (in1: DifferentiableField, windowSize: Int)
+  extends DifferentiableField {
 
   require(windowSize > 0, s"VectorMeanSquaresBorderCyclic: window $windowSize must be positive.")
   require(windowSize % 2 == 1, s"VectorMeanSquaresBorderCyclic: window $windowSize must be odd.")
@@ -214,4 +215,15 @@ case class VectorMeanSquaresBorderCyclic(in1: DifferentiableField, windowSize: I
 
   override val inputs: Map[Symbol, GradientPort] =
     Map('input -> GradientPort(in1, jacobian(_, in), jacobianAdjoint(_, in)))
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (in1, windowSize)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object VectorMeanSquaresBorderCyclic {
+  def apply(in1: DifferentiableField, windowSize: Int) =
+    new VectorMeanSquaresBorderCyclic(in1, windowSize)
 }

@@ -26,7 +26,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param input  the input signal
   * @param ranges the ranges of interest of the input field, e.g. Seq(rowRanges, columnRanges)
   */
-case class Subspace(input: DifferentiableField, ranges: Seq[Range]) extends DifferentiableField {
+class Subspace private[Subspace] (input: DifferentiableField, ranges: Seq[Range]) extends DifferentiableField {
   assert(input.forward.fieldShape.dimensions == 1 || input.forward.fieldShape.dimensions == 2, "input must be 1D or 2D")
   assert(ranges.length == input.forward.fieldShape.dimensions, "ranges dimensionality must match input dimensionality")
 
@@ -61,4 +61,20 @@ case class Subspace(input: DifferentiableField, ranges: Seq[Range]) extends Diff
         throw new RuntimeException("ranges dimensionality must match input dimensionality")
     ja
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, ranges)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object Subspace {
+  /** Pull a contiguous region out of a field.
+    *
+    * @param input  the input signal
+    * @param ranges the ranges of interest of the input field, e.g. Seq(rowRanges, columnRanges)
+    */
+  def apply(input: DifferentiableField, ranges: Seq[Range]) =
+    new Subspace(input, ranges)
 }

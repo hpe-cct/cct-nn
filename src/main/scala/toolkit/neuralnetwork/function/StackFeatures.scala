@@ -20,7 +20,6 @@ import libcog._
 import toolkit.neuralnetwork.DifferentiableField
 import toolkit.neuralnetwork.DifferentiableField.GradientPort
 
-
 /** Binary compute node that stacks fields in the feature vector domain. Both inputs
   * must have the same field shape.
   *
@@ -28,7 +27,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param left  first input signal
   * @param right second input signal, stacked on the first in the vector domain
   */
-case class StackFeatures(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
+class StackFeatures private[StackFeatures] (left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
   require(left.forward.tensorShape.dimensions == 1, s"'left' must be a VectorField, got ${left.forward.fieldType}")
   require(right.forward.tensorShape.dimensions == 1, s"'right' must be a VectorField, got ${right.forward.fieldType}")
   require(left.forward.tensorShape(0) % left.batchSize == 0,
@@ -157,4 +156,21 @@ case class StackFeatures(left: DifferentiableField, right: DifferentiableField) 
       _writeTensorElement(_out0, out, _tensorElement)
     }
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (left, right)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object StackFeatures {
+  /** Binary compute node that stacks fields in the feature vector domain. Both inputs
+    * must have the same field shape.
+    *
+    * @param left  first input signal
+    * @param right second input signal, stacked on the first in the vector domain
+    */
+  def apply(left: DifferentiableField, right: DifferentiableField) =
+    new StackFeatures(left, right)
 }

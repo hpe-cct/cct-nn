@@ -33,7 +33,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param b     a constant multiplier that scales the input
   * @param n     the power to raise the input to
   */
-case class AplusBXtoN(input: DifferentiableField, a: Float, b: Float, n: Float) extends DifferentiableField {
+class AplusBXtoN private[AplusBXtoN] (input: DifferentiableField, a: Float, b: Float, n: Float) extends DifferentiableField {
   private val x = (input.forward, input.batchSize)
 
   override val batchSize: Int = input.batchSize
@@ -72,4 +72,27 @@ case class AplusBXtoN(input: DifferentiableField, a: Float, b: Float, n: Float) 
   private def jacobianAdjoint(grad: Field, in: (Field, Int)): Field = {
     jacobian(grad, in)
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, a, b, n)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object AplusBXtoN {
+  /** Function that takes an input X and outputs (A + B*X)^N.  Cog has two pow() function signatures corresponding
+    * to both integer and non-integer powers.  The integer case for N is detected here
+    * and special-cased (instead of having a separate node for this).
+    *
+    * If N is other than a positive integer, be aware that you may need to ensure that the A + B*X term
+    * is always positive to avoid NaNs from killing the model state.
+    *
+    * @param input the input signal
+    * @param a     a constant offset added to the input
+    * @param b     a constant multiplier that scales the input
+    * @param n     the power to raise the input to
+    */
+  def apply (input: DifferentiableField, a: Float, b: Float, n: Float) =
+    new AplusBXtoN(input, a, b, n)
 }

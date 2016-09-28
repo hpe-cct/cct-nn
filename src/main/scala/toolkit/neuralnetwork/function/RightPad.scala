@@ -26,7 +26,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param sizes the amount of padding to add for all dimensions
   * @author Ben Chandler
   */
-case class RightPad(input: DifferentiableField, sizes: Seq[Int]) extends DifferentiableField {
+class RightPad private[RightPad] (input: DifferentiableField, sizes: Seq[Int]) extends DifferentiableField {
   assert(input.forward.fieldShape.dimensions == 1 || input.forward.fieldShape.dimensions == 2, "input must be 1D or 2D")
   assert(sizes.length == input.forward.fieldShape.dimensions, "pad dimensionality must match input dimensionality")
   assert(sizes.forall(_ >= 0), "pad sizes must be positive or zero")
@@ -55,4 +55,20 @@ case class RightPad(input: DifferentiableField, sizes: Seq[Int]) extends Differe
   // Converting the input shape to a sequence of ranges to grab the middle of
   // the gradient field.
     grad(grad.fieldShape.toArray.zip(sizes).map(s => 0 until s._1 - s._2): _*)
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, sizes)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object RightPad {
+  /** Pad an N-dimensional input with zeros on the "right" (after the data in each dimension)
+    *
+    * @param input the input signal
+    * @param sizes the amount of padding to add for all dimensions
+    */
+  def apply(input: DifferentiableField, sizes: Seq[Int]) =
+    new RightPad(input, sizes)
 }

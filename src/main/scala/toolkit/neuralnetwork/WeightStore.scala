@@ -48,7 +48,9 @@ object WeightStore {
       new WeightBinding {
         def initialWeights: Option[Field] = None
 
-        def register(weights: Field): Unit = bindings(symbol) = Some(weights)
+        def register(weights: Field): Unit = {
+          bindings(symbol) = Some(weights)
+        }
       }
     }
   }

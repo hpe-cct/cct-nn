@@ -31,7 +31,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   *                   requires that `weights` has a 0D field shape. Unshared bias applies a different
   *                   bias to each field point and requires `weights` to have the same field shape as `input`.
   */
-case class Bias(input: DifferentiableField, weights: DifferentiableField, sharedBias: Boolean = false) extends DifferentiableField {
+class Bias private[Bias] (input: DifferentiableField, weights: DifferentiableField, sharedBias: Boolean) extends DifferentiableField {
   private val inField = input.forward
   private val inBatchSize = input.batchSize
   private val inputShape = inField.fieldShape
@@ -193,4 +193,24 @@ case class Bias(input: DifferentiableField, weights: DifferentiableField, shared
     if (sharedBias) fieldReduceSum(sumAcrossBatches)
     else sumAcrossBatches
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, weights, sharedBias)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object Bias {
+  /** A bias transformation that adds bias weights to the input signal
+    *
+    * @param input      The input signal
+    * @param weights    The bias weights
+    * @param sharedBias Flag for sharing bias across the input field. Sharing bias causes the
+    *                   bias to be applied uniformly across the field points of the input and
+    *                   requires that `weights` has a 0D field shape. Unshared bias applies a different
+    *                   bias to each field point and requires `weights` to have the same field shape as `input`.
+    */
+  def apply (input: DifferentiableField, weights: DifferentiableField, sharedBias: Boolean = false) =
+    new Bias(input, weights, sharedBias)
 }

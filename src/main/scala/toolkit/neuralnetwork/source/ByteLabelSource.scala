@@ -21,17 +21,17 @@ import toolkit.neuralnetwork.DifferentiableField
 import toolkit.neuralnetwork.operator.indexToOneHotCode
 
 
-case class ByteLabelSource(path: String,
+class ByteLabelSource private[ByteLabelSource] (path: String,
                            numClasses: Int,
                            override val batchSize: Int,
-                           fieldCount: Option[Long] = None,
-                           updatePeriod: Int = 1,
-                           headerLen: Int = 0,
-                           resourcePath: String = "src/main/resources/",
-                           pipelined: Boolean = true,
-                           offset: Int = 0,
-                           stride: Int = 1,
-                           resetState: Long = 0L) extends DifferentiableField {
+                           fieldCount: Option[Long],
+                           updatePeriod: Int,
+                           headerLen: Int,
+                           resourcePath: String,
+                           pipelined: Boolean,
+                           offset: Int,
+                           stride: Int,
+                           resetState: Long) extends DifferentiableField {
   require(numClasses <= 256, "Number of classes must be <= 256 since each byte represents a class index")
   require(updatePeriod >= 1, "updatePeriod must be positive")
 
@@ -50,4 +50,26 @@ case class ByteLabelSource(path: String,
     resetState).sensor
 
   override val forward: Field = indexToOneHotCode(sensor, numClasses)
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (path, numClasses, batchSize, fieldCount, updatePeriod, headerLen, resourcePath,
+      pipelined, offset, stride, resetState)
+}
+
+object ByteLabelSource {
+  def apply(path: String,
+            numClasses: Int,
+            batchSize: Int,
+            fieldCount: Option[Long] = None,
+            updatePeriod: Int = 1,
+            headerLen: Int = 0,
+            resourcePath: String = "src/main/resources/",
+            pipelined: Boolean = true,
+            offset: Int = 0,
+            stride: Int = 1,
+            resetState: Long = 0L) =
+    new ByteLabelSource(path, numClasses, batchSize, fieldCount, updatePeriod, headerLen, resourcePath,
+      pipelined, offset, stride, resetState)
 }

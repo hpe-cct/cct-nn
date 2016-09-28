@@ -26,7 +26,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param cropSizes the amount of padding to remove for all dimensions
   * @author Ben Chandler
   */
-case class RightCrop(input: DifferentiableField, cropSizes: Seq[Int]) extends DifferentiableField {
+class RightCrop private[RightCrop] (input: DifferentiableField, cropSizes: Seq[Int]) extends DifferentiableField {
   private val x = (input.forward, input.batchSize)
 
   override val batchSize: Int = input.batchSize
@@ -50,4 +50,20 @@ case class RightCrop(input: DifferentiableField, cropSizes: Seq[Int]) extends Di
 
   private def jacobianAdjoint(grad: Field, x: (Field, Int)): Field =
     expand(grad, BorderZero, Shape(grad.fieldShape.toArray.zip(cropSizes).map(s => s._1 + s._2)))
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, cropSizes)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object RightCrop {
+  /** Crop an N-dimensional input from the "right" (the highest-indexed data in each dimension).
+    *
+    * @param input     the input signal
+    * @param cropSizes the amount of padding to remove for all dimensions
+    */
+  def apply(input: DifferentiableField, cropSizes: Seq[Int]) =
+    new RightCrop(input, cropSizes)
 }

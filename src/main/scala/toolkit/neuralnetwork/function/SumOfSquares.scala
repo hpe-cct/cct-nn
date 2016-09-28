@@ -21,7 +21,7 @@ import toolkit.neuralnetwork.DifferentiableField
 import toolkit.neuralnetwork.DifferentiableField.GradientPort
 
 
-case class SumOfSquares(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
+class SumOfSquares private[SumOfSquares] (left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
   private val x1 = (left.forward, left.batchSize)
   private val x2 = (right.forward, right.batchSize)
 
@@ -62,4 +62,15 @@ case class SumOfSquares(left: DifferentiableField, right: DifferentiableField) e
     val input2 = x2._1
     grad * (input2 - input1)
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (left, right)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object SumOfSquares {
+  def apply(left: DifferentiableField, right: DifferentiableField) =
+    new SumOfSquares(left, right)
 }

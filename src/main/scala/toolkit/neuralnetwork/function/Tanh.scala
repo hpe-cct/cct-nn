@@ -27,7 +27,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param a     scale parameter
   * @param b     gain parameter
   */
-case class Tanh(input: DifferentiableField, a: Float = 1.7159f, b: Float = 0.6667f) extends DifferentiableField {
+class Tanh private[Tanh] (input: DifferentiableField, a: Float, b: Float) extends DifferentiableField {
   override val batchSize: Int = input.batchSize
   override val forward: libcog.Field = a * tanh(b * input.forward)
   override val inputs: Map[Symbol, GradientPort] =
@@ -36,4 +36,15 @@ case class Tanh(input: DifferentiableField, a: Float = 1.7159f, b: Float = 0.666
   private def jacobian(dx: Field): Field = {
     a * b * (1f - sq(tanh(b * input.forward))) * dx
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, a, b)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object Tanh {
+  def apply(input: DifferentiableField, a: Float = 1.7159f, b: Float = 0.6667f) =
+    new Tanh(input, a, b)
 }

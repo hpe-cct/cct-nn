@@ -26,7 +26,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param input the input signal
   * @param size  pad size, in field points
   */
-case class ZeroPad(input: DifferentiableField, size: Int) extends DifferentiableField {
+class ZeroPad private[ZeroPad] (input: DifferentiableField, size: Int) extends DifferentiableField {
   require(input.forward.fieldShape.dimensions == 1 || input.forward.fieldShape.dimensions == 2, "input must be 1D or 2D")
   require(size > 0, "pad size must be positive")
 
@@ -59,4 +59,15 @@ case class ZeroPad(input: DifferentiableField, size: Int) extends Differentiable
   // Converting the input shape to a sequence of ranges to grab the middle of
   // the gradient field.
     grad(grad.fieldShape.toArray.map(s => size until s - size): _*)
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, size)
+}
+
+/** Factory method- eliminates clutter of 'new' operator. */
+object ZeroPad {
+  def apply (input: DifferentiableField, size: Int) =
+    new ZeroPad(input, size)
 }

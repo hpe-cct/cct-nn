@@ -21,10 +21,10 @@ import toolkit.neuralnetwork.DifferentiableField
 import toolkit.neuralnetwork.DifferentiableField.GradientPort
 
 
-case class PlanarConvolution(input: DifferentiableField,
+class PlanarConvolution private[PlanarConvolution] (input: DifferentiableField,
                              kernel: Field,
                              borderPolicy: BorderPolicy,
-                             samplingPolicy: ConvolutionSamplingPolicy = NoSamplingConvolution
+                             samplingPolicy: ConvolutionSamplingPolicy
                             ) extends DifferentiableField {
   require(kernel.fieldShape.dimensions == 2, "kernel must be 2D")
   require(kernel.tensorShape.points == 1, "kernel must contain scalar elements")
@@ -57,4 +57,18 @@ case class PlanarConvolution(input: DifferentiableField,
       case p => throw new RuntimeException(s"unsupported border policy $p")
     }
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, kernel, borderPolicy, samplingPolicy)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object PlanarConvolution {
+  def apply(input: DifferentiableField,
+            kernel: Field,
+            borderPolicy: BorderPolicy,
+            samplingPolicy: ConvolutionSamplingPolicy = NoSamplingConvolution) =
+    new PlanarConvolution(input, kernel, borderPolicy, samplingPolicy)
 }

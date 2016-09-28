@@ -29,7 +29,7 @@ import toolkit.neuralnetwork.operator.spray
   * @param left  The input signal, typically a classification output
   * @param right The reference signal, typically a one hot code representing a class label
   */
-case class CrossEntropy(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
+class CrossEntropy private[CrossEntropy] (left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
   private val x1 = (left.forward, left.batchSize)
   private val x2 = (right.forward, right.batchSize)
 
@@ -78,4 +78,22 @@ case class CrossEntropy(left: DifferentiableField, right: DifferentiableField) e
     val inputLen = in.tensorShape(0) / batchSize
     -log(in) * spray(grad, inputLen)
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (left, right)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object CrossEntropy {
+  /** The cross-entropy loss function applied to the softmax of the input relative to
+    * the reference signal. This loss function is commonly used for training a classification
+    * network.
+    *
+    * @param left  The input signal, typically a classification output
+    * @param right The reference signal, typically a one hot code representing a class label
+    */
+  def apply (left: DifferentiableField, right: DifferentiableField) =
+    new CrossEntropy(left, right)
 }

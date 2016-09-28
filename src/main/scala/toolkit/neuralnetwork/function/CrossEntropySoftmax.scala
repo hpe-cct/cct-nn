@@ -22,7 +22,8 @@ import DifferentiableField.GradientPort
 import toolkit.neuralnetwork.operator.sumSpray
 
 
-case class CrossEntropySoftmax(inference: DifferentiableField, labels: DifferentiableField) extends DifferentiableField {
+class CrossEntropySoftmax private[CrossEntropySoftmax] (inference: DifferentiableField, labels: DifferentiableField)
+  extends DifferentiableField {
   require(inference.batchSize == labels.batchSize,
     s"inference batch size (${inference.batchSize}) must match labels batch size ${labels.batchSize}")
   require(inference.forward.fieldType == labels.forward.fieldType,
@@ -83,4 +84,15 @@ case class CrossEntropySoftmax(inference: DifferentiableField, labels: Different
     val logSoftmax = -log(max(softmax, 1e-4f))
     logSoftmax
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (inference, labels)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object CrossEntropySoftmax {
+  def apply (inference: DifferentiableField, labels: DifferentiableField) =
+    new CrossEntropySoftmax(inference, labels)
 }

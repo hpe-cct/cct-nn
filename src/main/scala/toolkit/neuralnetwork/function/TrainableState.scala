@@ -20,8 +20,7 @@ import libcog._
 import toolkit.neuralnetwork.{DifferentiableField, WeightBinding}
 import toolkit.neuralnetwork.policy.{LearningRule, WeightInitPolicy}
 
-
-case class TrainableState(fieldShape: Shape, tensorShape: Shape, initPolicy: WeightInitPolicy,
+class TrainableState private[TrainableState] (fieldShape: Shape, tensorShape: Shape, initPolicy: WeightInitPolicy,
                           learningRule: LearningRule, weightBinding: WeightBinding) extends DifferentiableField {
   override val batchSize = 1
   override val gradientConsumer = learningRule.gradientConsumer
@@ -36,5 +35,19 @@ case class TrainableState(fieldShape: Shape, tensorShape: Shape, initPolicy: Wei
     }
   }
 
-  override def backwardCallback(backward: Field): Unit = learningRule.learn(forward, backward)
+  override def backwardCallback(backward: Field): Unit = {
+    learningRule.learn(forward, backward)
+  }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (fieldShape, tensorShape, initPolicy, learningRule, weightBinding)
+}
+
+/** Factory method- eliminates clutter of 'new' operator. */
+object TrainableState {
+  def apply (fieldShape: Shape, tensorShape: Shape, initPolicy: WeightInitPolicy,
+             learningRule: LearningRule, weightBinding: WeightBinding) =
+    new TrainableState(fieldShape, tensorShape, initPolicy, learningRule, weightBinding)
 }

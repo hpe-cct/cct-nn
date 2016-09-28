@@ -34,7 +34,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param input  input signal
   * @param factor the factor by which the output is reduced
   */
-case class Downsample(input: DifferentiableField, factor: Int = 2) extends DifferentiableField {
+class Downsample private[Downsample] (input: DifferentiableField, factor: Int) extends DifferentiableField {
   private val in = (input.forward, input.batchSize)
 
   override val batchSize: Int = input.batchSize
@@ -64,4 +64,27 @@ case class Downsample(input: DifferentiableField, factor: Int = 2) extends Diffe
     else
       trim(untrimmed, x.fieldShape)
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, factor)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object Downsample {
+  /** The downsample operator which samples every `factor` input element to produce a reduced size output.
+    * The outputSize = ceil(inputSize / factor).
+    *
+    * Decided not to expose the "phase" parameter that exists with Cog's core downsample/upsample operators.
+    * There are some subtleties present in the Cog API, namely phase <= inSize-1 % factor.  Put a different way,
+    * the Cog core's downsample() will result in a field of size ceil(inSize/factor).  The specification of a
+    * non-zero phase should not disturb that. (inSize, factor, phase) = (5, 3, 2) is such a problem case where
+    * one might assume an output of size 1, but Cog will generate a size of 2.
+    *
+    * @param input  input signal
+    * @param factor the factor by which the output is reduced
+    */
+  def apply(input: DifferentiableField, factor: Int = 2) =
+    new Downsample(input, factor)
 }

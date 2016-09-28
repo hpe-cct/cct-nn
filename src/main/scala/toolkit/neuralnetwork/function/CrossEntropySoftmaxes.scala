@@ -35,8 +35,8 @@ import toolkit.neuralnetwork.operator.{spray, sumSpray}
   * @param safeMode      Protect against generating NaNs for large inputs (>100).
   *
   */
-case class CrossEntropySoftmaxes(left: DifferentiableField, right: DifferentiableField,
-                                 refInputIsPDF: Boolean = true, safeMode: Boolean = true) extends DifferentiableField {
+class CrossEntropySoftmaxes private[CrossEntropySoftmaxes] (left: DifferentiableField, right: DifferentiableField,
+                                 refInputIsPDF: Boolean, safeMode: Boolean) extends DifferentiableField {
   private val x1 = (left.forward, left.batchSize)
   private val x2 = (right.forward, right.batchSize)
 
@@ -127,4 +127,29 @@ case class CrossEntropySoftmaxes(left: DifferentiableField, right: Differentiabl
     val softmax = softMax(if (safeMode) shiftDownByMax(x1) else x1)._1
     -log(softmax) * spray(grad, gradSprayFactor)
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (left, right, refInputIsPDF, safeMode)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object CrossEntropySoftmaxes {
+  /** The cross-entropy loss function applied to the softmax of the input relative to
+    * the reference signal. This loss function is commonly used for training a classification
+    * network.  Unlike the similarly-named "CrossEntropySoftMax", this class computes
+    * a cross-entropy softmax individually for each image representation of the batch.  As
+    * such, its output is not a single scalar, but instead a vector of length `batchSize`.
+    * This allows the class to be tested by the existing test infrastructure.
+    *
+    * @param left          The input signal, typically a classification output
+    * @param right         The reference signal, typically a one hot code representing a class label
+    * @param refInputIsPDF The `right` reference input for each element of the batch sums to 1.
+    * @param safeMode      Protect against generating NaNs for large inputs (>100).
+    *
+    */
+  def apply (left: DifferentiableField, right: DifferentiableField,
+             refInputIsPDF: Boolean = true, safeMode: Boolean = true) =
+    new CrossEntropySoftmaxes(left, right, refInputIsPDF, safeMode)
 }

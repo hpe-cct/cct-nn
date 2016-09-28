@@ -22,7 +22,7 @@ import DifferentiableField.GradientPort
 import toolkit.neuralnetwork.operator.{backFC, forwardFC, weightGradFC}
 
 
-case class FullyConnected(input: DifferentiableField, weights: DifferentiableField) extends DifferentiableField {
+class FullyConnected private[FullyConnected] (input: DifferentiableField, weights: DifferentiableField) extends DifferentiableField {
   require(weights.forward.tensorOrder == 1, "weights must be a vector field")
   require(input.forward.fieldShape == weights.forward.fieldShape,
     s"weights must have field shape ${input.forward.fieldShape}, currently ${weights.forward.fieldShape}")
@@ -55,4 +55,15 @@ case class FullyConnected(input: DifferentiableField, weights: DifferentiableFie
   private def weightsJacobianAdjoint(grad: Field): Field = {
     weightGradFC(input.forward, grad, batchSize)
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, weights)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object FullyConnected {
+  def apply(input: DifferentiableField, weights: DifferentiableField) =
+    new FullyConnected(input, weights)
 }

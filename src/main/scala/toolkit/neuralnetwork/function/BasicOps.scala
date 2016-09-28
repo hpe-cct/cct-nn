@@ -23,21 +23,21 @@ import toolkit.neuralnetwork.function.BasicOps._
 
 
 trait BasicOps {
-  def add(left: DifferentiableField, right: DifferentiableField): DifferentiableField = Add(left, right)
+  def add(left: DifferentiableField, right: DifferentiableField): DifferentiableField = new Add(left, right)
 
-  def add(input: DifferentiableField, c: Float): DifferentiableField = AddConstant(input, c)
+  def add(input: DifferentiableField, c: Float): DifferentiableField = new AddConstant(input, c)
 
-  def subtract(left: DifferentiableField, right: DifferentiableField): DifferentiableField = Subtract(left, right)
+  def subtract(left: DifferentiableField, right: DifferentiableField): DifferentiableField = new Subtract(left, right)
 
-  def subtract(input: DifferentiableField, c: Float): DifferentiableField = SubtractConstant(input, c)
+  def subtract(input: DifferentiableField, c: Float): DifferentiableField = new SubtractConstant(input, c)
 
-  def multiply(left: DifferentiableField, right: DifferentiableField): DifferentiableField = Multiply(left, right)
+  def multiply(left: DifferentiableField, right: DifferentiableField): DifferentiableField = new Multiply(left, right)
 
-  def multiply(input: DifferentiableField, c: Float): DifferentiableField = MultiplyByConstant(input, c)
+  def multiply(input: DifferentiableField, c: Float): DifferentiableField = new MultiplyByConstant(input, c)
 
   def divide(left: DifferentiableField, right: DifferentiableField): DifferentiableField = left * pow(right, -1)
 
-  def divide(input: DifferentiableField, c: Float): DifferentiableField = DivideByConstant(input, c)
+  def divide(input: DifferentiableField, c: Float): DifferentiableField = new DivideByConstant(input, c)
 
   /** Raise a node to a fixed power.  Cog has two pow() function signatures corresponding
     * to both integer and non-integer powers.  The integer case is detected here
@@ -50,12 +50,14 @@ trait BasicOps {
     * @param input the input signal
     * @param n     the power to raise the input to
     */
-  def pow(input: DifferentiableField, n: Float): DifferentiableField = Pow(input, n)
+  def pow(input: DifferentiableField, n: Float): DifferentiableField = new Pow(input, n)
 }
 
 private[neuralnetwork] object BasicOps {
 
-  case class Add(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
+  // Since construction is limited to the uses above, we omit the Factory objects for these classes.
+
+  class Add(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
     require(left.batchSize == right.batchSize,
       s"batch sizes must match (got ${left.batchSize} and ${right.batchSize})")
     require(left.forward.fieldType == right.forward.fieldType,
@@ -66,16 +68,18 @@ private[neuralnetwork] object BasicOps {
     override val inputs: Map[Symbol, GradientPort] = Map(
       'left -> GradientPort(left, dx => dx, grad => grad),
       'right -> GradientPort(right, dx => dx, grad => grad))
+    override def toString = this.getClass.getName + (left, right)
   }
 
-  case class AddConstant(input: DifferentiableField, c: Float) extends DifferentiableField {
+  class AddConstant(input: DifferentiableField, c: Float) extends DifferentiableField {
     override val batchSize: Int = input.batchSize
     override val forward: libcog.Field = input.forward + c
     override val inputs: Map[Symbol, GradientPort] =
       Map('input -> GradientPort(input, dx => dx, grad => grad))
+    override def toString = this.getClass.getName + (input, c)
   }
 
-  case class Subtract(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
+  class Subtract(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
     require(left.batchSize == right.batchSize,
       s"batch sizes must match (got ${left.batchSize} and ${right.batchSize})")
     require(left.forward.fieldType == right.forward.fieldType,
@@ -86,16 +90,18 @@ private[neuralnetwork] object BasicOps {
     override val inputs: Map[Symbol, GradientPort] = Map(
       'left -> GradientPort(left, dx => dx, grad => grad),
       'right -> GradientPort(right, dx => dx * -1f, grad => grad * -1f))
+    override def toString = this.getClass.getName + (left, right)
   }
 
-  case class SubtractConstant(input: DifferentiableField, c: Float) extends DifferentiableField {
+  class SubtractConstant(input: DifferentiableField, c: Float) extends DifferentiableField {
     override val batchSize: Int = input.batchSize
     override val forward: libcog.Field = input.forward - c
     override val inputs: Map[Symbol, GradientPort] =
       Map('input -> GradientPort(input, dx => dx, grad => grad))
+    override def toString = this.getClass.getName + (input, c)
   }
 
-  case class Multiply(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
+  class Multiply(left: DifferentiableField, right: DifferentiableField) extends DifferentiableField {
     require(left.batchSize == right.batchSize,
       s"batch sizes must match (got ${left.batchSize} and ${right.batchSize})")
     require(left.forward.fieldType == right.forward.fieldType,
@@ -106,9 +112,10 @@ private[neuralnetwork] object BasicOps {
     override val inputs: Map[Symbol, GradientPort] = Map(
       'left -> GradientPort(left, dx => dx * right.forward, grad => grad * right.forward),
       'right -> GradientPort(right, dx => dx * left.forward, grad => grad * left.forward))
+    override def toString = this.getClass.getName + (left, right)
   }
 
-  case class MultiplyByConstant(input: DifferentiableField, c: Float) extends DifferentiableField {
+  class MultiplyByConstant(input: DifferentiableField, c: Float) extends DifferentiableField {
     override val inputs: Map[Symbol, GradientPort] = Map('input -> GradientPort(input, jacobian, jacobianAdjoint))
     override val batchSize: Int = input.batchSize
     override val forward: libcog.Field = input.forward * c
@@ -116,9 +123,10 @@ private[neuralnetwork] object BasicOps {
     def jacobian(dx: Field): Field = dx * c
 
     def jacobianAdjoint(grad: Field): Field = jacobian(grad)
+    override def toString = this.getClass.getName + (input, c)
   }
 
-  case class DivideByConstant(input: DifferentiableField, c: Float) extends DifferentiableField {
+  class DivideByConstant(input: DifferentiableField, c: Float) extends DifferentiableField {
     require(c != 0f, "cannot divide by zero")
 
     override val inputs: Map[Symbol, GradientPort] = Map('input -> GradientPort(input, jacobian, jacobianAdjoint))
@@ -128,9 +136,10 @@ private[neuralnetwork] object BasicOps {
     def jacobian(dx: Field): Field = dx / c
 
     def jacobianAdjoint(grad: Field): Field = jacobian(grad)
+    override def toString = this.getClass.getName + (input, c)
   }
 
-  case class Pow(input: DifferentiableField, n: Float) extends DifferentiableField {
+  class Pow(input: DifferentiableField, n: Float) extends DifferentiableField {
     private val in = (input.forward, input.batchSize)
 
     override val batchSize: Int = input.batchSize
@@ -165,6 +174,7 @@ private[neuralnetwork] object BasicOps {
       else
         libcog.pow(x, n - 1f) * n * dx
     }
+    override def toString = this.getClass.getName + (input, n)
   }
 
 }

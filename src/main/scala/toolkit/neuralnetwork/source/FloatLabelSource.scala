@@ -82,36 +82,60 @@ import toolkit.neuralnetwork.operator.indexToOneHotCode
   * @param stride Distance (in batchSize units) between the start of one
   *               batch and the start of the next
   */
-case class FloatLabelSource(path: String,
-                            numClasses: Int,
-                            override val batchSize: Int,
-                            fieldCount: Option[Long] = None,
-                            updatePeriod: Int = 1,
-                            headerLen: Int = 0,
-                            resourcePath: String = "src/main/resources/",
-                            bigEndian: Boolean = true,
-                            pipelined: Boolean = true,
-                            offset: Int = 0,
-                            stride: Int = 1,
-                            resetState: Long = 0L) extends DifferentiableField {
+class FloatLabelSource private[FloatLabelSource] (path: String,
+                                                  numClasses: Int,
+                                                  override val batchSize: Int,
+                                                  fieldCount: Option[Long],
+                                                  updatePeriod: Int,
+                                                  headerLen: Int,
+                                                  resourcePath: String,
+                                                  bigEndian: Boolean,
+                                                  pipelined: Boolean,
+                                                  offset: Int,
+                                                  stride: Int,
+                                                  resetState: Long) extends DifferentiableField {
   require(updatePeriod >= 1,
     "updatePeriod must be positive"
   )
 
   val sensor = new FloatFileSensor(
-      path,
-      resourcePath,
-      Shape(),
-      1,
-      fieldCount,
-      batchSize,
-      updatePeriod,
-      headerLen,
-      bigEndian,
-      pipelined,
-      offset,
-      stride,
-      resetState).sensor
+    path,
+    resourcePath,
+    Shape(),
+    1,
+    fieldCount,
+    batchSize,
+    updatePeriod,
+    headerLen,
+    bigEndian,
+    pipelined,
+    offset,
+    stride,
+    resetState).sensor
 
   override val forward: Field = indexToOneHotCode(sensor, numClasses)
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (path, numClasses, batchSize, fieldCount, updatePeriod, headerLen, resourcePath, bigEndian,
+      pipelined, offset, stride, resetState)
+}
+
+object FloatLabelSource {
+  def apply(path: String,
+            numClasses: Int,
+            batchSize: Int,
+            fieldCount: Option[Long] = None,
+            updatePeriod: Int = 1,
+            headerLen: Int = 0,
+            resourcePath: String = "src/main/resources/",
+            bigEndian: Boolean = true,
+            pipelined: Boolean = true,
+            offset: Int = 0,
+            stride: Int = 1,
+            resetState: Long = 0L) =
+    new FloatLabelSource(path, numClasses, batchSize, fieldCount, updatePeriod, headerLen, resourcePath, bigEndian,
+      pipelined, offset, stride, resetState)
+
 }

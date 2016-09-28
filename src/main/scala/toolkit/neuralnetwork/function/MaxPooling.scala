@@ -49,7 +49,7 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param poolSize the edge size of the square pooling window, defaults to 2
   * @param stride   the amount by which the pooling window is stepped (in both x and y), defaults to 2
   */
-case class MaxPooling(input: DifferentiableField, poolSize: Int = 2, stride: Int = 2) extends DifferentiableField {
+class MaxPooling private[MaxPooling] (input: DifferentiableField, poolSize: Int, stride: Int) extends DifferentiableField {
   override val batchSize: Int = input.batchSize
   override val forward: libcog.Field = _forward((input.forward, batchSize))._1
   override val inputs: Map[Symbol, GradientPort] =
@@ -414,5 +414,44 @@ case class MaxPooling(input: DifferentiableField, poolSize: Int = 2, stride: Int
     }
     out
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, poolSize, stride)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object MaxPooling {
+  /** The max pooling function with a `poolSize` x `poolSize` input field stepped by `stride`. The input
+    * must be two dimensional.
+    *
+    * The ability to accomodate overlapping pools (where poolSize != stride) adds considerable complexity.  In
+    * particular, the jacobianAdjoint must be prepared to sum multiple gradients (dY's) because of the potential
+    * spraying of values in the forward direction.  Thus, there are two different implementation strategies taken
+    * for the two cases:
+    *
+    * Overlapped pools:
+    * The jacobianAdjoint GPUOperator allocates one thread per element of the larger 'dX' field that it
+    * generates to more naturally handle the summing that might occur into each such element.
+    * For performance, the jacobianAdjoint GPUOperator assumes and reads in a gradient-sized "index field"
+    * that contains the field offset of the input that is the maximum of the pool.
+    * The forward operator leverages the existence of the "index field" to generate its output as well.
+    *
+    * Non-overlapping pools:
+    * The jacobianAdjoint GPUOperator allocates one thread per element of the gradient 'dY' field and has
+    * that thread write the dY value to the appropriate 'dX' field element (no summing required).
+    * Since no "index field" is needed to help speed the jacobianAdjoint, the forward operator examines
+    * its input tile and outputs the maximum in a straightforward manner.
+    *
+    * The current approach might run faster by using local memory, but at the risk of not being able to accommodate
+    * large strides..
+    *
+    * @param input    input signal
+    * @param poolSize the edge size of the square pooling window, defaults to 2
+    * @param stride   the amount by which the pooling window is stepped (in both x and y), defaults to 2
+    */
+  def apply(input: DifferentiableField, poolSize: Int = 2, stride: Int = 2) =
+    new MaxPooling(input, poolSize, stride)
 }
 

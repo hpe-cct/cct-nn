@@ -21,9 +21,21 @@ import toolkit.neuralnetwork.DifferentiableField
 import DifferentiableField.GradientPort
 
 
-case class ReLU(input: DifferentiableField) extends DifferentiableField {
+class ReLU private[ReLU] (input: DifferentiableField) extends DifferentiableField {
   override val batchSize: Int = input.batchSize
   override val forward: libcog.Field = max(input.forward, 0f)
   override val inputs: Map[Symbol, GradientPort] =
     Map('input -> GradientPort(input, dx => (forward > 0f) * dx, grad => (forward > 0f) * grad))
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input)
 }
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object ReLU {
+  def apply(input: DifferentiableField) =
+    new ReLU(input)
+}
+

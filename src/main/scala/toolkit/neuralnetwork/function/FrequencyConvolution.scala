@@ -24,7 +24,7 @@ import toolkit.neuralnetwork.operator.{fourierBackProject, fourierFilterGrad, fo
 
 object FrequencyConvolution extends Logarithm {
 
-  private case class UnsafeConvolution(input: DifferentiableField, weights: DifferentiableField) extends DifferentiableField {
+  private class UnsafeConvolution(input: DifferentiableField, weights: DifferentiableField) extends DifferentiableField {
     private val (batchSetSize, filterSetSize, inputSetSize, filterGradFilterSetSize) =
       if (Convolution.tuneForNvidiaMaxwell)
         (12, 4, 6, 8)
@@ -48,6 +48,11 @@ object FrequencyConvolution extends Logarithm {
 
     private def jacobianAdjoint2(grad: Field): Field =
       fourierFilterGrad(input.forward, grad, weights.forward.fieldShape, batchSize, inputSetSize, filterGradFilterSetSize)
+
+    // If you add/remove constructor parameters, you should alter the toString() implementation. */
+    /** A string description of the instance in the "case class" style. */
+    override def toString = this.getClass.getName +
+      (input, weights)
   }
 
   def apply(input: DifferentiableField, weights: DifferentiableField,
@@ -81,7 +86,7 @@ object FrequencyConvolution extends Logarithm {
         val columnPad = fftPad(input.forward.fieldType.columns, columnHalo)
         val padSizes = Seq(rowPad, columnPad)
         val fftIn = RightPad(input, padSizes)
-        val fftOut = UnsafeConvolution(fftIn, weights)
+        val fftOut = new UnsafeConvolution(fftIn, weights)
         val cropped = RightCrop(fftOut, padSizes)
         val layerOut = if (stride == 1) cropped else Downsample(cropped, stride)
         layerOut
@@ -90,7 +95,7 @@ object FrequencyConvolution extends Logarithm {
         val columnPad = fftPad(input.forward.fieldType.columns, 0)
         val padSizes = Seq(rowPad, columnPad)
         val fftIn = if (padSizes == Seq(0, 0)) input else RightPad(input, padSizes)
-        val fftOut = UnsafeConvolution(fftIn, weights)
+        val fftOut = new UnsafeConvolution(fftIn, weights)
         // Valid rows go from the first valid row to one past the last valid row
         val validRows = rowHalo until (input.forward.fieldType.rows - rowHalo)
         val validColumns = columnHalo until (input.forward.fieldType.columns - columnHalo)
@@ -102,7 +107,7 @@ object FrequencyConvolution extends Logarithm {
         layerOut
       case BorderCyclic =>
         if (isPowerOf2(input.forward.fieldType.rows) && isPowerOf2(input.forward.fieldType.columns))
-          UnsafeConvolution(input, weights)
+          new UnsafeConvolution(input, weights)
         else
           throw new RuntimeException(s"Frequency Convolution with BorderPolicy $border not yet supported for this input size: ${input.forward.fieldShape}")
       case BorderClamp =>

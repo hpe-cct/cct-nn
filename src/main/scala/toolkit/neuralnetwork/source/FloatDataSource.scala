@@ -91,38 +91,59 @@ import toolkit.neuralnetwork.DifferentiableField
   * @param stride Distance (in batchSize units) between the start of one
   *               batch and the start of the next
   */
-case class FloatDataSource(path: String,
-                           fieldShape: Shape,
-                           vectorLen: Int,
-                           override val batchSize: Int,
-                           fieldCount: Option[Long] = None,
-                           updatePeriod: Int = 1,
-                           headerLen: Int = 0,
-                           resourcePath: String = "src/main/resources/",
-                           bigEndian: Boolean = true,
-                           pipelined: Boolean = true,
-                           offset: Int = 0,
-                           stride: Int = 1,
-                           resetState: Long = 0L) extends DifferentiableField {
+class FloatDataSource private[FloatDataSource] (path: String,
+                                                fieldShape: Shape,
+                                                vectorLen: Int,
+                                                override val batchSize: Int,
+                                                fieldCount: Option[Long],
+                                                updatePeriod: Int,
+                                                headerLen: Int,
+                                                resourcePath: String,
+                                                bigEndian: Boolean,
+                                                pipelined: Boolean,
+                                                offset: Int,
+                                                stride: Int,
+                                                resetState: Long) extends DifferentiableField {
   private val sensor = new FloatFileSensor(
-      path,
-      resourcePath,
-      fieldShape,
-      vectorLen,
-      fieldCount,
-      batchSize,
-      updatePeriod,
-      headerLen,
-      bigEndian,
-      pipelined,
-      offset,
-      stride,
-      resetState
-    ).sensor
+    path,
+    resourcePath,
+    fieldShape,
+    vectorLen,
+    fieldCount,
+    batchSize,
+    updatePeriod,
+    headerLen,
+    bigEndian,
+    pipelined,
+    offset,
+    stride,
+    resetState
+  ).sensor
 
   override val forward: Field = sensor
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (path, fieldShape, vectorLen, batchSize, fieldCount, updatePeriod, headerLen, resourcePath,
+      bigEndian, pipelined, offset, stride, resetState)
 }
 
-
+object FloatDataSource {
+  def apply(path: String,
+            fieldShape: Shape,
+            vectorLen: Int,
+            batchSize: Int,
+            fieldCount: Option[Long] = None,
+            updatePeriod: Int = 1,
+            headerLen: Int = 0,
+            resourcePath: String = "src/main/resources/",
+            bigEndian: Boolean = true,
+            pipelined: Boolean = true,
+            offset: Int = 0,
+            stride: Int = 1,
+            resetState: Long = 0L) =
+    new FloatDataSource(path, fieldShape, vectorLen, batchSize, fieldCount, updatePeriod, headerLen, resourcePath,
+      bigEndian, pipelined, offset, stride, resetState)
+}
 
 

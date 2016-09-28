@@ -20,7 +20,6 @@ import libcog._
 import toolkit.neuralnetwork.DifferentiableField
 import toolkit.neuralnetwork.DifferentiableField.GradientPort
 
-
 /** A convolutional transformation that applies a filter bank to a signal in the space domain.
   *
   * @author Matthew Pickett and Dick Carter
@@ -28,8 +27,8 @@ import toolkit.neuralnetwork.DifferentiableField.GradientPort
   * @param weights The filter bank input, typically a TrainableState field
   * @param stride  The factor by which the output with be downsampled after the BorderValid convolution
   */
-case class SpatialConvolution(input: DifferentiableField, weights: DifferentiableField,
-                              border: BorderPolicy = BorderValid, stride: Int = 1) extends DifferentiableField {
+class SpatialConvolution private[SpatialConvolution] (input: DifferentiableField, weights: DifferentiableField,
+                              border: BorderPolicy, stride: Int) extends DifferentiableField {
 
   val supportedBorders = Seq(BorderValid, BorderZero)
   require(supportedBorders.contains(border),
@@ -135,4 +134,22 @@ case class SpatialConvolution(input: DifferentiableField, weights: Differentiabl
     else
       blockReduceSum(dX2, batchSize)
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (input, weights, border, stride)
+}
+
+/** Factory object- eliminates clutter of 'new' operator. */
+object SpatialConvolution {
+  /** A convolutional transformation that applies a filter bank to a signal in the space domain.
+    *
+    * @param input   The signal node
+    * @param weights The filter bank input, typically a TrainableState field
+    * @param stride  The factor by which the output with be downsampled after the BorderValid convolution
+    */
+  def apply(input: DifferentiableField, weights: DifferentiableField,
+            border: BorderPolicy = BorderValid, stride: Int = 1) =
+    new SpatialConvolution(input, weights, border, stride)
 }

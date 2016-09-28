@@ -19,18 +19,18 @@ package toolkit.neuralnetwork.source
 import libcog._
 import toolkit.neuralnetwork.DifferentiableField
 
-case class ByteDataSource(path: String,
+class ByteDataSource private[ByteDataSource] (path: String,
                           fieldShape: Shape,
                           vectorLen: Int,
                           override val batchSize: Int,
-                          fieldCount: Option[Long] = None,
-                          updatePeriod: Int = 1,
-                          headerLen: Int = 0,
-                          resourcePath: String = "src/main/resources/",
-                          pipelined: Boolean = true,
-                          offset: Int = 0,
-                          stride: Int = 1,
-                          resetState: Long = 0L) extends DifferentiableField {
+                          fieldCount: Option[Long],
+                          updatePeriod: Int,
+                          headerLen: Int,
+                          resourcePath: String,
+                          pipelined: Boolean,
+                          offset: Int,
+                          stride: Int,
+                          resetState: Long) extends DifferentiableField {
 
   private val sensor = new ByteFilePackedSensor(
     path,
@@ -48,4 +48,27 @@ case class ByteDataSource(path: String,
   ).sensor
 
   override val forward: Field = sensor / 255f
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (path, fieldShape, vectorLen, batchSize, fieldCount, updatePeriod, headerLen, resourcePath,
+      pipelined, offset, stride, resetState)
+}
+
+object ByteDataSource {
+
+  def apply(path: String,
+            fieldShape: Shape,
+            vectorLen: Int,
+            batchSize: Int,
+            fieldCount: Option[Long] = None,
+            updatePeriod: Int = 1,
+            headerLen: Int = 0,
+            resourcePath: String = "src/main/resources/",
+            pipelined: Boolean = true,
+            offset: Int = 0,
+            stride: Int = 1,
+            resetState: Long = 0L) =
+    new ByteDataSource(path, fieldShape, vectorLen, batchSize, fieldCount, updatePeriod, headerLen, resourcePath,
+      pipelined, offset, stride, resetState)
 }

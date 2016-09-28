@@ -20,8 +20,8 @@ import libcog._
 import toolkit.neuralnetwork.DifferentiableField
 
 
-case class RandomSource(fieldShape: Shape, vectorLen: Int, override val batchSize: Int,
-                        bits: Int = 12, seed: Option[Long] = None, override val gradientConsumer: Boolean = false) extends DifferentiableField {
+class RandomSource private[RandomSource] (fieldShape: Shape, vectorLen: Int, override val batchSize: Int,
+                        bits: Int, seed: Option[Long], override val gradientConsumer: Boolean) extends DifferentiableField {
 
   override val forward: libcog.Field = {
     val rng = seed match {
@@ -64,4 +64,15 @@ case class RandomSource(fieldShape: Shape, vectorLen: Int, override val batchSiz
 
     croppedField
   }
+
+  // If you add/remove constructor parameters, you should alter the toString() implementation. */
+  /** A string description of the instance in the "case class" style. */
+  override def toString = this.getClass.getName +
+    (fieldShape, vectorLen, batchSize, bits, seed, gradientConsumer)
+}
+
+object RandomSource {
+  def apply(fieldShape: Shape, vectorLen: Int, batchSize: Int,
+            bits: Int = 12, seed: Option[Long] = None, gradientConsumer: Boolean = false) =
+    new RandomSource(fieldShape, vectorLen, batchSize, bits, seed, gradientConsumer)
 }
