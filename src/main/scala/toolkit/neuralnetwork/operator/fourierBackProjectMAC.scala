@@ -17,6 +17,7 @@
 package toolkit.neuralnetwork.operator
 
 import libcog._
+import toolkit.neuralnetwork.function.Convolution
 
 /**
  * @author Matthew Pickett
@@ -50,15 +51,42 @@ private[neuralnetwork] object fourierBackProjectMAC extends GPUOperatorHelper {
     require(fR.tensorShape(0)%filterNum == 0)
     val inputLen = fR.tensorShape(0)/filterNum
 
-    val batchSetSize = math.min(batchSize, batchSetSizeDesired)
-    val inputSetSize = math.min(inputLen, inputSetSizeDesired)
+    // This operator is described with variants based the following choices for (batchSetSize, inputSetSize)
+    val batchSetSizes = Seq(1, 2, 3, 4, 5, 6, 8, 12, 16)
+    val inputSetSizes = Seq(1, 2, 3, 4, 5, 6, 8, 12, 16)
 
-    // If (batchSize,inputLen) is not a multiple of (batchSetSize,inputSetSize), then round up.
-    val batchSetNum = (batchSize + batchSetSize - 1)/batchSetSize
-    val inputSetNum = (inputLen + inputSetSize - 1)/inputSetSize
+    // NVIDIA PASCAL bricks (and earlier) do horribly above this miniTile size
+    // threshold, so we exclude these to speed up the tuning process.
+    val maxMiniTileElements = 128
+
+    def clipSetSizes(batchSetSize: Int, inputSetSize: Int) = {
+      val clippedBatchSetSize = math.min(batchSize, batchSetSize)
+      val clippedInputSetSize = math.min(inputLen, inputSetSize)
+      (clippedBatchSetSize, clippedInputSetSize)
+    }
+
+    val parameters =
+      if (Convolution.useProfiler) {
+        for (batchSetSize <- batchSetSizes;
+             inputSetSize <- inputSetSizes
+             if (batchSetSize * inputSetSize <= maxMiniTileElements)
+        )
+          yield clipSetSizes(batchSetSize, inputSetSize)
+      }
+      else {
+        IndexedSeq(clipSetSizes(batchSetSizeDesired, inputSetSizeDesired))
+      }
+
+    val variantNames = parameters.toArray.map(p => s"fourierBackProjectMAC_${p._1}_${p._2}")
 
     val outputType = new FieldType(gradShape, Shape(inputLen*batchSize), Float32)
-    val (outR, outI) = GPUOperator(outputType, outputType, "fourierBackProjectMAC"){
+    val (outR, outI) = GPUOperator(outputType, outputType, variantNames){ i =>
+
+      val (batchSetSize, inputSetSize) = parameters(i)
+
+      // If (batchSize,inputLen) is not a multiple of (batchSetSize,inputSetSize), then round up.
+      val batchSetNum = (batchSize + batchSetSize - 1)/batchSetSize
+      val inputSetNum = (inputLen + inputSetSize - 1)/inputSetSize
 
       // Set up initial workfield parameters before a possible "transpose" of the assignment of threads
       // in the workfield to elements of the input fields

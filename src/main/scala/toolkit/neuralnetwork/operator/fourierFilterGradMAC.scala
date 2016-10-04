@@ -17,6 +17,7 @@
 package toolkit.neuralnetwork.operator
 
 import libcog._
+import toolkit.neuralnetwork.function.Convolution
 
 /**
  * @author Matthew Pickett
@@ -50,15 +51,42 @@ private [neuralnetwork] object fourierFilterGradMAC extends GPUOperatorHelper {
     require(gR.tensorShape(0)%batchSize == 0)
     val filterNum = gR.tensorShape(0)/batchSize
 
-    val inputSetSize = math.min(inputLen, inputSetSizeDesired)
-    val filterSetSize = math.min(filterNum, filterSetSizeDesired)
+    // This operator is described with variants based the following choices for (inputSetSize, filterSetSize)
+    val inputSetSizes = Seq(1, 2, 3, 4, 5, 6, 8, 12, 16)
+    val filterSetSizes = Seq(1, 2, 3, 4, 5, 6, 8, 12, 16)
 
-    // If (inputLen,filterNum) is not a multiple of (inputSetSize,filterSetSize), then round up.
-    val inputSetNum = (inputLen + inputSetSize - 1)/inputSetSize
-    val filterSetNum = (filterNum + filterSetSize - 1)/filterSetSize
+    // NVIDIA PASCAL bricks (and earlier) do horribly above this miniTile size
+    // threshold, so we exclude these to speed up the tuning process.
+    val maxMiniTileElements = 128
+
+    def clipSetSizes(inputSetSize: Int, filterSetSize: Int) = {
+      val clippedInputSetSize = math.min(inputLen, inputSetSize)
+      val clippedFilterSetSize = math.min(filterNum, filterSetSize)
+      (clippedInputSetSize, clippedFilterSetSize)
+    }
+
+    val parameters =
+      if (Convolution.useProfiler) {
+        for (inputSetSize <- inputSetSizes;
+             filterSetSize <- filterSetSizes
+             if (inputSetSize * filterSetSize <= maxMiniTileElements)
+        )
+          yield clipSetSizes(inputSetSize, filterSetSize)
+      }
+      else {
+        IndexedSeq(clipSetSizes(inputSetSizeDesired, filterSetSizeDesired))
+      }
+
+    val variantNames = parameters.toArray.map(p => s"fourierFilterGradMAC_${p._1}_${p._2}")
 
     val outputType = new FieldType(inputShape, Shape(filterNum*inputLen), Float32)
-    val (outR, outI) = GPUOperator(outputType, outputType, "fourierFilterGradMAC"){
+    val (outR, outI) = GPUOperator(outputType, outputType, variantNames){ i =>
+
+      val (inputSetSize, filterSetSize) = parameters(i)
+
+      // If (inputLen,filterNum) is not a multiple of (inputSetSize,filterSetSize), then round up.
+      val inputSetNum = (inputLen + inputSetSize - 1)/inputSetSize
+      val filterSetNum = (filterNum + filterSetSize - 1)/filterSetSize
 
       // Standard workfield parameters before a possible "transpose" of the assignment of threads
       // in the workfield to elements of the input fields

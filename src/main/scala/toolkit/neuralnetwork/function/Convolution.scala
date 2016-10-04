@@ -59,5 +59,12 @@ object Convolution {
   // The FrequencyConvolutional layer's MAC kernels have a strong sensitivity to the underlying GPU architecture
   // (Kepler vs. Maxwell). See the class 'node.compute.FrequencyConvolutional' for use of this flag.
   var tuneForNvidiaMaxwell = false
+
+  // The cct-core compiler can now profile a GPUOperator that has been described as a set of variants.
+  // The cct-nn 'MAC' kernels have been coded to take advantage of this.  The first-time compile times
+  // will be longer, but after that a cache of previously profiled kernels will result in no overhead
+  // to this auto-tuning approach.
+
+  var useProfiler = true
 }
 
