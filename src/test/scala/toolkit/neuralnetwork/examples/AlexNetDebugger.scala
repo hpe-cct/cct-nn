@@ -22,5 +22,5 @@ import toolkit.neuralnetwork.examples.networks.AlexNet
 
 /** Debugger application of the AlexNet model. */
 object AlexNetDebugger extends CogDebuggerApp(new ComputeGraph {
-  new AlexNet(batchSize = 128, enableNormalization = true, useRandomData = false)
+  new AlexNet(batchSize = 128, enableNormalization = true, useRandomData = true)
 })

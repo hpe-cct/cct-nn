@@ -16,7 +16,6 @@
 
 package toolkit.neuralnetwork.examples.networks
 
-import ch.qos.logback.classic.Level
 import libcog._
 import toolkit.neuralnetwork.DifferentiableField
 import toolkit.neuralnetwork.Implicits._
@@ -47,14 +46,10 @@ class AlexNet(batchSize: Int, enableNormalization: Boolean, useRandomData: Boole
 
   // Data parameters:
   // paths to the mean image file, training images, and training labels for real data option
-  val imagenetRoot = "/home/carteric/imagenet/"
+  val imagenetRoot = "/fdata/scratch/imagenet/"
   val meanImageFile = imagenetRoot + "TrainingMeanImage1.bin"
-  val trainingImages = imagenetRoot + "TrainingImagesSplit4a.bin"
-  val labelFile = imagenetRoot + "TrainingLabelsSplit4a.bin"
-//  val imagenetRoot = "/fdata/scratch/imagenet/"
-//  val meanImageFile = imagenetRoot + "TrainingMeanImage1.bin"
-//  val trainingImages = imagenetRoot + "TrainingImages1.bin"
-//  val labelFile = imagenetRoot + "TrainingLabels1.bin"
+  val trainingImages = imagenetRoot + "TrainingImages1.bin"
+  val labelFile = imagenetRoot + "TrainingLabels1.bin"
 
   // Tuning parameters:
   // use Maxwell-optimized convolution? set to false on Kepler or prior architectures.
