@@ -65,6 +65,6 @@ object Convolution {
   // will be longer, but after that a cache of previously profiled kernels will result in no overhead
   // to this auto-tuning approach.
 
-  var useProfiler = true
+  var useProfiler = !Cog.noVariants
 }
 

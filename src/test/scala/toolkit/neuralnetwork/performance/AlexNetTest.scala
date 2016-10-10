@@ -81,7 +81,8 @@ object AlexNetTest extends App {
   val testSeconds = 60
   // If instead you're interested in peak (pre-throttled) performance, you might want to spec some cool down time.
   val coolDownSeconds = 0
-  val deviceNum = -1 // If -1 then all devices
+  val deviceNum = 1 // If -1 then all devices
+//  val deviceNum = -1 // If -1 then all devices
 
   val deviceDescriptors = {
     val platform = OpenCLPlatform()
@@ -134,7 +135,8 @@ object AlexNetTest extends App {
       cg.release
   }
 
-  val batchSizes = Seq(32, 64, 128, 256, 512)
+  val batchSizes = Seq(128)
+//  val batchSizes = Seq(32, 64, 128, 256, 512)
 
   println(s"AlexNet regression over batchsizes $batchSizes and devices $deviceRange")
 
