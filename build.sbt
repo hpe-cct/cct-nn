@@ -22,7 +22,7 @@ javaOptions in Test ++= Seq("-Xmx100G", "-Xloggc:gc.log")
 
 libraryDependencies ++= Seq(
   "com.hpe.cct" %% "cct-core" % "5.0.0",
-  "com.hpe.cct" %% "cct-io" % "0.8.8",
+  "com.hpe.cct" %% "cct-io" % "0.8.9",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.scalatest" %% "scalatest" % "2.2.6" % "test",
   "junit" % "junit" % "4.7" % "test",
