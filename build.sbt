@@ -21,7 +21,7 @@ fork in Test := true
 javaOptions in Test ++= Seq("-Xmx100G", "-Xloggc:gc.log")
 
 libraryDependencies ++= Seq(
-  "com.hpe.cct" %% "cct-core" % "5.0.0-alpha.5",
+  "com.hpe.cct" %% "cct-core" % "5.0.0",
   "com.hpe.cct" %% "cct-io" % "0.8.8",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.scalatest" %% "scalatest" % "2.2.6" % "test",
